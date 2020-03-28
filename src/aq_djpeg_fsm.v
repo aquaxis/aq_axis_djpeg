@@ -108,6 +108,7 @@ module aq_djpeg_fsm(
 	reg [4:0]		State;
 	//wire			ImageEnable;
 	reg [15:0]		ReadCount;
+	reg [15:0]		TableReadCount;
 
 	reg [15:0]		JpegWidth;
 	reg [15:0]		JpegHeight;
@@ -130,6 +131,7 @@ module aq_djpeg_fsm(
 		if(!rst) begin
 			State				<= S_Idle;
 			ReadCount			<= 16'd0;
+			TableReadCount		<= 16'd0;
 			JpegWidth			<= 16'd0;
 			JpegHeight			<= 16'd0;
 			ReadDqtTable		<= 1'b0;
@@ -211,6 +213,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State		<= S_DQTTable;
 						ReadCount	<= DataIn[31:16] -16'd2;
+						TableReadCount <= DataIn[31:16] - 16'd2;
 					end
 				end
 				S_DQTTable: begin
@@ -218,14 +221,20 @@ module aq_djpeg_fsm(
 						State			<= S_DQTRead;
 						ReadDqtTable	<= DataIn[24];
 						ReadCount		<= 16'd0;
+						TableReadCount  <= TableReadCount - 1'd1;
 					end
 				end
 				S_DQTRead: begin
 					if(DataInEnable == 1'b1) begin
 						if(ReadCount ==63) begin
-							State		<= S_GetMarker;
+							if(TableReadCount == 1) begin
+								State		<= S_GetMarker;
+							end else begin
+								State		<= S_DQTTable;
+							end
 						end
 						ReadCount		<= ReadCount +16'd1;
+						TableReadCount  <= TableReadCount - 1'd1;
 					end
 				end
 
@@ -234,6 +243,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State			<= S_DHTTable;
 						ReadCount		<= DataIn[31:16];
+						TableReadCount  <= DataIn[31:16] - 16'd2;
 					end
 				end
 				S_DHTTable: begin
@@ -245,6 +255,7 @@ module aq_djpeg_fsm(
 							8'h01: ReadDhtTable <= 2'b10;
 							8'h11: ReadDhtTable <= 2'b11;
 						endcase
+						TableReadCount <= TableReadCount - 1'd1;
 					end
 					HmShift		<= 16'h8000;
 					HmData			<= 16'h0000;
@@ -255,6 +266,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State		<= S_DHTMakeHm1;
 						HmCount	<= DataIn[31:24];
+					    TableReadCount <= TableReadCount - 1'd1;
 					end
 					HmEnable		<= 1'b0;
 				end
@@ -282,9 +294,14 @@ module aq_djpeg_fsm(
 					HmEnable	<= 1'b0;
 					if(DataInEnable == 1'b1) begin
 						if(HmMax == HmCount +1) begin
-							State	<= S_GetMarker;
+							if(TableReadCount == 1) begin
+								State	<= S_GetMarker;
+							end else begin
+								State	<= S_DHTTable;
+							end
 						end
 						HmCount	<= HmCount +8'd1;
+						TableReadCount <= TableReadCount - 1'd1;
 					end
 				end
 
@@ -356,7 +373,7 @@ module aq_djpeg_fsm(
 				end
 				S_SOFReadComp: begin
 					// コンポーネント数
-					// 1:グレースケール
+					// 1:グレースケー�?
 					// 3:YCbCr or YIQ
 					// 4:CMYK
 					if(DataInEnable == 1'b1) begin
@@ -395,11 +412,11 @@ module aq_djpeg_fsm(
 				S_SOFMakeBlock0:begin
 					State				<= S_SOFMakeBlock1;
 					if(JpegComp == 3) begin
-						// コンポーネント数が3の場合、16x16が1ブロック
+						// コンポーネント数�?3の場合�??16x16�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	+16'd15;
 						JpegBlockHeight	<= JpegBlockHeight +16'd15;
 					end else begin
-						// コンポーネント数が1の場合、32x8が1ブロック
+						// コンポーネント数�?1の場合�??32x8�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	+16'd31;
 						JpegBlockHeight	<= JpegBlockHeight +16'd7;
 					end
@@ -407,11 +424,11 @@ module aq_djpeg_fsm(
 				S_SOFMakeBlock1:begin
 					State				<= S_GetMarker;
 					if(JpegComp == 3) begin
-						// コンポーネント数が3の場合、16x16が1ブロック
+						// コンポーネント数�?3の場合�??16x16�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	>> 4;
 						JpegBlockHeight	<= JpegBlockHeight >> 4;
 					end else begin
-						// コンポーネント数が1の場合、32x8が1ブロック
+						// コンポーネント数�?1の場合�??32x8�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	>> 5;
 						JpegBlockHeight	<= JpegBlockHeight >> 3;
 					end

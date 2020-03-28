@@ -64,7 +64,6 @@ module tb_aq_axis_djpeg;
   reg         S_AXIS_TVALID;
 
   // AXI Stream wire
-  wire        M_AXIS_TCLK;
   wire [31:0] M_AXIS_TDATA;
   wire        M_AXIS_TKEEP;
   wire        M_AXIS_TLAST;
@@ -148,7 +147,7 @@ module tb_aq_axis_djpeg;
     .S_AXI_RREADY   ( S_AXI_RREADY  ),
 
     // AXI Stream input
-    .S_AXIS_TCLK    ( S_AXIS_TCLK   ),
+    .TCLK    ( S_AXIS_TCLK   ),
     .S_AXIS_TDATA   ( S_AXIS_TDATA  ),
     .S_AXIS_TKEEP   ( S_AXIS_TKEEP  ),
     .S_AXIS_TLAST   ( S_AXIS_TLAST  ),
@@ -157,7 +156,6 @@ module tb_aq_axis_djpeg;
     .S_AXIS_TVALID  ( S_AXIS_TVALID ),
 
     // AXI Stream output
-    .M_AXIS_TCLK    ( M_AXIS_TCLK   ),
     .M_AXIS_TDATA   ( M_AXIS_TDATA  ),
     .M_AXIS_TKEEP   ( M_AXIS_TKEEP  ),
     .M_AXIS_TLAST   ( M_AXIS_TLAST  ),
@@ -205,7 +203,7 @@ module tb_aq_axis_djpeg;
 
 	// Read JPEG File
 	initial begin
-		$readmemh("/home/hidemi/workspace/IPCORE/aq_axis_djpeg/src/test.mem",JPEG_MEM);
+		$readmemh("D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\sample3.mem",JPEG_MEM);
 	end
 
 	// Initial
@@ -529,7 +527,7 @@ module tb_aq_axis_djpeg;
 		@(posedge CLK);
 
 		$display(" End Clock %d",count);
-		fp = $fopen("sim.dat");
+		fp = $fopen("D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\sample3.dat");
 		$fwrite(fp,"%0d\n",u_axis_aq_djpeg.u_aq_djpeg.OutWidth);
 		$fwrite(fp,"%0d\n",u_axis_aq_djpeg.u_aq_djpeg.OutHeight);
 
