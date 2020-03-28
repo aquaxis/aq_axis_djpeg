@@ -193,7 +193,7 @@ module aq_axis_djpeg_ctrl
   // Write Register
   always @(posedge ACLK or negedge ARESETN) begin
     if(!ARESETN) begin
-      reg_rst <= 1'b0;
+      reg_rst <= 1'b1;
     end else begin
       if(wr_ena) begin
         case(local_addr[7:0] & 8'hFC)
