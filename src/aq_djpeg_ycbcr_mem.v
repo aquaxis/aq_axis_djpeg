@@ -93,12 +93,12 @@ module aq_djpeg_ycbcr_mem(
 			end else begin
 				case(state)
 					S_IDLE: begin
-						if((WriteNext == 1'b1) && (ReadBank == (WriteBank +2'b1)) && (ReadNext == 1'b0)) begin
+						if((WriteNext == 1'b1) && (ReadBank == (WriteBank +2'd2)) && (ReadNext == 1'b0)) begin
 							state <= S_FULL;
 						end
 					end
 					S_FULL: begin
-						if((ReadNext == 1'b1) && (ReadBank == WriteBank)) begin
+						if(ReadNext == 1'b1) begin
 							state <= S_IDLE;
 						end
 					end
