@@ -58,6 +58,7 @@ module aq_djpeg_fsm(
 	//
 	output			ImageEnable,
 	output reg [2:0]	JpegComp,
+	output          JpegProgressive,
 
 	//
 	output			UseByte,
@@ -125,6 +126,8 @@ module aq_djpeg_fsm(
 	reg [15:0]		JpegBlockWidth;
 	reg [15:0]		JpegBlockHeight;
 
+    reg             JpegProgressive;
+
 	reg				ImageEnable;
 
 	always @(posedge clk or negedge rst) begin
@@ -144,6 +147,7 @@ module aq_djpeg_fsm(
 			JpegBlockWidth	<= 16'd0;
 			JpegBlockHeight	<= 16'd0;
 			JpegComp			<= 3'd0;
+			JpegProgressive   <= 1'b0;
 			ImageEnable		<= 1'b0;
 		end else begin
 			case(State)
@@ -171,6 +175,11 @@ module aq_djpeg_fsm(
 							end
 							16'hFFC0: begin		// SOF0 Segment
 								State <= S_SOFLength;
+								JpegProgressive <= 1'b0;
+							end
+							16'hFFC2: begin		// SOF2 Segment
+								State <= S_SOFLength;
+								JpegProgressive <= 1'b1;
 							end
 							16'hFFDA: begin		// SOS Segment
 								State <= S_SOSLength;

@@ -75,7 +75,7 @@ module aq_axis_djpeg
   output        M_AXIS_TVALID
 );
 
-wire JpegDecodeRst, JpegDecodeIdle;
+wire JpegDecodeRst, JpegDecodeIdle, JpegProgressive;
 wire [15:0] OutWidth, OutHeight, OutPixelX, OutPixelY;
 wire [7:0] OutR, OutG, OutB;
 
@@ -112,13 +112,12 @@ wire [7:0] OutR, OutG, OutB;
 
     .LOGIC_RST      ( JpegDecodeRst   ),
     .LOGIC_IDLE     ( JpegDecodeIdle  ),
+    .LOGIC_PROGRESSIVE(JpegProgressive),
 
     .WIDTH          ( OutWidth[15:0]  ),
     .HEIGHT         ( OutHeight[15:0] ),
     .PIXELX         ( OutPixelX[15:0] ),
-    .PIXELY         ( OutPixelY[15:0] ),
-
-    .DEBUG          ()
+    .PIXELY         ( OutPixelY[15:0] )
   );
 
 aq_djpeg u_aq_djpeg(
@@ -132,6 +131,7 @@ aq_djpeg u_aq_djpeg(
   .DataInReq      ( S_AXIS_TREADY   ),
 
   .JpegDecodeIdle ( JpegDecodeIdle  ),
+  .JpegProgressive( JpegProgressive  ),
 
   .OutEnable      ( M_AXIS_TVALID   ),
   .OutWidth       ( OutWidth[15:0]  ),

@@ -49,7 +49,8 @@ module aq_djpeg_huffman(
 	input			DataInEnable,			// Data In Enable
 	input [31:0]	DataIn,				// Data In
 	input [2:0]	JpegComp,
-
+    input           JpegProgressive,
+    
 	output			DecodeUseBit,
 	output [6:0]	DecodeUseWidth,
 
@@ -122,6 +123,7 @@ module aq_djpeg_huffman(
 		.DataInEnable		( DataInEnable		),
 		.DataIn			( DataIn				),
 		.JpegComp			( JpegComp				),
+		.JpegProgressive    ( JpegProgressive       ),
 
 		// Huffman Table List
 		.DhtColor			( HmDhtColor			),

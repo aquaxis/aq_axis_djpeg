@@ -28,7 +28,8 @@ module aq_djpeg(
 	output			DataInRead,
 	output 			DataInReq,
 
-	output			JpegDecodeIdle,	// Deocdeer Process Idle(1:Idle, 0:Run)
+	output			JpegDecodeIdle,	// Decoder Process Idle(1:Idle, 0:Run)
+	output          JpegProgressive,
 
 	output			OutEnable,
 	output [15:0]	OutWidth,
@@ -148,6 +149,7 @@ module aq_djpeg(
 		//
 		.ImageEnable		( ImageEnable		),
 		.JpegComp			( JpegComp			),
+		.JpegProgressive    ( JpegProgressive   ),
 
 		//
 		.UseByte			( UseByte			),
@@ -192,6 +194,7 @@ module aq_djpeg(
 		.DataInEnable			( JpegDataEnable	),
 		.DataIn				( JpegData			),
 		.JpegComp				( JpegComp			),
+		.JpegProgressive        ( JpegProgressive   ),
 
 		// Output decode data
 		.DecodeUseBit			( UseBit			),

@@ -34,6 +34,7 @@ module aq_djpeg_hm_decode(
 	input			DataInEnable,			// Data In Enable
 	input [31:0]	DataIn,				// Data In
 	input [2:0]	JpegComp,
+	input           JpegProgressive,
 
 	// DHT table
 	output [1:0]	DhtColor,				// Color Number
@@ -712,7 +713,7 @@ module aq_djpeg_hm_decode(
 				Phase8: begin
 					OutEnable	<= 1'b0;
 					Process		<= Phase1;
-					if(ProcessCount <6'd63) begin
+					if(ProcessCount <6'd63 && (!JpegProgressive)) begin
 						ProcessCount	<= ProcessCount +6'd1;
 					end else begin
 						ProcessCount	<= 6'd0;
@@ -748,8 +749,9 @@ module aq_djpeg_hm_decode(
 	assign DecodeColor		= ProcessColor;
 	assign DecodeCount		= ProcessCount[5:0];
 	assign DecodeZero			= OutZero;
-	assign DecodeCode			= DqtData * OutCode;
-
-	assign DataOutEnable		= (Process == Phase8) & (ProcessCount >= 6'd63);
+	// Assuming the first section of progressive JPEG has fixed shift of 1 to reduce shifter size
+	assign DecodeCode			= (DqtData * OutCode) << JpegProgressive;
+	// First round of progressive JPEG contains DC only so only 1 component per block
+	assign DataOutEnable		= (Process == Phase8) & (ProcessCount >= 6'd63 || JpegProgressive);
 
 endmodule
