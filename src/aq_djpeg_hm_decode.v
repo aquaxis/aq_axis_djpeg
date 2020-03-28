@@ -35,6 +35,8 @@ module aq_djpeg_hm_decode(
 	input [31:0]	DataIn,				// Data In
 	input [2:0]	JpegComp,
 	input           JpegProgressive,
+	input [1:0]     SubSamplingW,
+	input [1:0]     SubSamplingH,
 
 	// DHT table
 	output [1:0]	DhtColor,				// Color Number
@@ -721,13 +723,23 @@ module aq_djpeg_hm_decode(
 						DataOutColor	<= ProcessColor;
 						// JPEGコンポーネント数が3ならブロックは6つある
 						// JPEGコンポーネント数が1ならブロックは4つしかない(グレースケール)
-						if(	((JpegComp == 3) && (ProcessColor == 5)) ||
-							((JpegComp == 1) && (ProcessColor == 3))
-						) begin
-//						if(ProcessColor == 5) begin
-							ProcessColor	<= 3'b000;
+						if (JpegComp == 3) begin
+							case (ProcessColor)
+							3'd0: ProcessColor <= (SubSamplingW == 2'd2) ? ProcessColor +3'd1
+												: (SubSamplingH == 2'd2) ? 3'd2
+																			: 3'd4;
+							3'd1: ProcessColor <= (SubSamplingH == 2'd2) ? ProcessColor +3'd1
+																			: 3'd4;
+							3'd2: ProcessColor <= (SubSamplingW == 2'd2) ? ProcessColor +3'd1
+																			: 3'd4;
+							3'd5: ProcessColor <= 3'd0;
+							default: ProcessColor <= ProcessColor +3'd1;
+							endcase
 						end else begin
-							ProcessColor	<= ProcessColor +3'd1;
+							if (ProcessColor == 3'd3)
+								ProcessColor <= 3'd0;
+							else
+								ProcessColor	<= ProcessColor +3'd1;
 						end
 					end
 				end	

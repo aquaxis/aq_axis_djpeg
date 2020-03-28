@@ -35,7 +35,7 @@ module aq_djpeg_fsm(
 	input			OutEnable,
 	input [15:0]	OutPixelX,
 	input [15:0]	OutPixelY,
-
+    
 	//
 	output			DqtEnable,
 	output			DqtTable,
@@ -59,6 +59,8 @@ module aq_djpeg_fsm(
 	output			ImageEnable,
 	output reg [2:0]	JpegComp,
 	output          JpegProgressive,
+	output [1:0]    OutputSubSamplingW,
+	output [1:0]    OutputSubSamplingH,
 
 	//
 	output			UseByte,
@@ -125,6 +127,10 @@ module aq_djpeg_fsm(
 
 	reg [15:0]		JpegBlockWidth;
 	reg [15:0]		JpegBlockHeight;
+	
+	reg [1:0]       ComponentNum;
+	reg [1:0]       SubSamplingW;
+	reg [1:0]       SubSamplingH;
 
     reg             JpegProgressive;
 
@@ -148,6 +154,9 @@ module aq_djpeg_fsm(
 			JpegBlockHeight	<= 16'd0;
 			JpegComp			<= 3'd0;
 			JpegProgressive   <= 1'b0;
+			ComponentNum        <= 2'd0;
+			SubSamplingW      <= 2'd0;
+			SubSamplingH      <= 2'd0;
 			ImageEnable		<= 1'b0;
 		end else begin
 			case(State)
@@ -382,7 +391,7 @@ module aq_djpeg_fsm(
 				end
 				S_SOFReadComp: begin
 					// コンポーネント数
-					// 1:グレースケー�?
+					// 1:グレースケー�?
 					// 3:YCbCr or YIQ
 					// 4:CMYK
 					if(DataInEnable == 1'b1) begin
@@ -401,11 +410,17 @@ module aq_djpeg_fsm(
 				S_SOFReadCompColor0: begin
 					if(DataInEnable == 1'b1) begin
 						State			<= S_SOFReadCompColor1;
+						// Tracking component ID
+						ComponentNum    <= DataIn[25:24];
 					end
 				end
 				S_SOFReadCompColor1: begin
 					if(DataInEnable == 1'b1) begin
 						State			<= S_SOFReadCompColor2;
+						if (ComponentNum == 2'd1) begin
+						  SubSamplingW  <= DataIn[29:28];
+						  SubSamplingH  <= DataIn[25:24];
+						end
 					end
 				end
 				S_SOFReadCompColor2: begin
@@ -421,11 +436,11 @@ module aq_djpeg_fsm(
 				S_SOFMakeBlock0:begin
 					State				<= S_SOFMakeBlock1;
 					if(JpegComp == 3) begin
-						// コンポーネント数�?3の場合�??16x16�?1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	+16'd15;
-						JpegBlockHeight	<= JpegBlockHeight +16'd15;
+						// コンポーネント数�?3の場合�??16x16�?1ブロック
+						JpegBlockWidth  <= JpegBlockWidth  + ((SubSamplingW == 2'd2) ? 16'd15 : 16'd7);
+						JpegBlockHeight	<= JpegBlockHeight + ((SubSamplingH == 2'd2) ? 16'd15 : 16'd7);
 					end else begin
-						// コンポーネント数�?1の場合�??32x8�?1ブロック
+						// コンポーネント数�?1の場合�??32x8�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	+16'd31;
 						JpegBlockHeight	<= JpegBlockHeight +16'd7;
 					end
@@ -433,11 +448,11 @@ module aq_djpeg_fsm(
 				S_SOFMakeBlock1:begin
 					State				<= S_GetMarker;
 					if(JpegComp == 3) begin
-						// コンポーネント数�?3の場合�??16x16�?1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	>> 4;
-						JpegBlockHeight	<= JpegBlockHeight >> 4;
+						// コンポーネント数�?3の場合�??16x16�?1ブロック
+						JpegBlockWidth	<= JpegBlockWidth	>> ((SubSamplingW == 2'd2) ? 4 : 3);
+						JpegBlockHeight	<= JpegBlockHeight  >> ((SubSamplingH == 2'd2) ? 4 : 3);
 					end else begin
-						// コンポーネント数�?1の場合�??32x8�?1ブロック
+						// コンポーネント数�?1の場合�??32x8�?1ブロック
 						JpegBlockWidth	<= JpegBlockWidth	>> 5;
 						JpegBlockHeight	<= JpegBlockHeight >> 3;
 					end
@@ -475,6 +490,8 @@ module aq_djpeg_fsm(
 	assign OutWidth		= JpegWidth;
 	assign OutHeight		= JpegHeight;
 	assign OutBlockWidth	= JpegBlockWidth[11:0];
+	assign OutputSubSamplingW = SubSamplingW;
+	assign OutputSubSamplingH = SubSamplingH;
 
 	assign DqtEnable		= (State == S_DQTRead);
 	assign DqtTable		= ReadDqtTable;

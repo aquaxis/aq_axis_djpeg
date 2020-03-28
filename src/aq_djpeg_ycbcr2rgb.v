@@ -27,9 +27,12 @@ module aq_djpeg_ycbcr2rgb(
 
 	input			InEnable,
 	output			InRead,
+	output          InReadNext,
 	input [11:0]	InBlockX,
 	input [11:0]	InBlockY,
 	input [2:0]	InComp,
+	input [1:0]     SubSamplingW,
+	input [1:0]     SubSamplingH,
 	output [7:0]	InAddress,
 	input [8:0]	InY,
 	input [8:0]	InCb,
@@ -47,6 +50,8 @@ module aq_djpeg_ycbcr2rgb(
 	reg [11:0]	 	RunBlockX;
 	reg [11:0]	 	RunBlockY;
 	reg [2:0]		RunComp;
+	reg [1:0]       RunSamplingW;
+	reg [1:0]       RunSamplingH;
 
 	always @(posedge clk or negedge rst) begin
 		if(!rst) begin
@@ -55,6 +60,8 @@ module aq_djpeg_ycbcr2rgb(
 			RunBlockX	<= 12'h000;
 			RunBlockY	<= 12'h000;
 			RunComp	<= 1'b0;
+			RunSamplingW <= 2'b0;
+			RunSamplingH <= 2'b0;
 		end else begin
 			if(RunActive == 1'b0) begin
 				if(InEnable == 1'b1) begin
@@ -62,18 +69,33 @@ module aq_djpeg_ycbcr2rgb(
 					RunBlockX	<= InBlockX;
 					RunBlockY	<= InBlockY;
 					RunComp	<= InComp;
+					RunSamplingW <= SubSamplingW;
+					RunSamplingH <= SubSamplingH;
 				end
 				RunCount	<= 8'h00;
 			end else begin
-				if(RunCount == 8'd255) begin
+				if(InReadNext) begin
 					RunActive	<= 1'b0;
 					RunCount	<= 8'd0;
 				end else begin
-					RunCount	<= RunCount +8'd1;
+					if ((RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
+						RunCount    <= RunCount +8'd9;
+					else
+						RunCount	<= RunCount +8'd1;
 				end
 			end
 		end
 	end
+
+	assign InReadNext = (RunActive &&
+							( (RunComp == 3'd1)                              ? (RunCount == 8'd255)
+							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd1) ? (RunCount == 8'd119)
+							: (RunSamplingW == 2'd2 && RunSamplingH == 2'd1) ? (RunCount == 8'd127)
+							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd2) ? (RunCount == 8'd247)
+							// : (RunSamplingW == 2'd2 && RunSamplingH == 2'd2) ? (RunCount == 8'd255)
+							: (RunCount == 8'd255)
+							)
+						);
 
 	assign InRead		= RunActive;
 	assign InAddress	= RunCount;
@@ -161,8 +183,8 @@ module aq_djpeg_ycbcr2rgb(
 			PreEnable <= RunActive;
 			if(RunComp == 3) begin
 				// コンポーネント数が3のとき、16x16が1ブロック
-				PreCountX <= {RunBlockX,RunCount[3:0]};
-				PreCountY <= {RunBlockY,RunCount[7:4]};
+				PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
+				PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
 			end else begin
 				// コンポーネント数が1のとき、32x8が1ブロック
 				PreCountX <= {RunBlockX[10:0],RunCount[7],RunCount[3:0]};

@@ -36,6 +36,7 @@ module aq_djpeg_ycbcr_mem(
 	output			DataOutEnable,
 	input [7:0]	DataOutAddress,
 	input			DataOutRead,
+	input			DataOutReadNext,
 	output [8:0]	DataOutY,
 	output [8:0]	DataOutCb,
 	output [8:0]	DataOutCr
@@ -58,7 +59,7 @@ module aq_djpeg_ycbcr_mem(
 	assign WriteNext = (DataInEnable && (DataInAddress == 5'd63) && 
 							(((JpegComp == 3'd3) && (DataInColor == 3'd5)) ||
 							((JpegComp == 3'd1) && (DataInColor == 3'd3))))?1'b1:1'b0;
-	assign ReadNext = (DataOutRead && (DataOutAddress == 8'd255))?1'b1:1'b0;
+	assign ReadNext = DataOutReadNext;
 
 	// Bank
 	always @(posedge clk or negedge rst) begin

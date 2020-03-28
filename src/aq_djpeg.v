@@ -109,6 +109,8 @@ module aq_djpeg(
 
 	wire [11:0]		JpegBlockWidth;
 	wire [2:0]		JpegComp;
+	wire [1:0]      SubSamplingW;
+	wire [1:0]      SubSamplingH;
 
 	aq_djpeg_fsm u_jpeg_fsm(
 		.rst				( rst				),
@@ -150,6 +152,8 @@ module aq_djpeg(
 		.ImageEnable		( ImageEnable		),
 		.JpegComp			( JpegComp			),
 		.JpegProgressive    ( JpegProgressive   ),
+		.OutputSubSamplingW ( SubSamplingW      ),
+		.OutputSubSamplingH ( SubSamplingH      ),
 
 		//
 		.UseByte			( UseByte			),
@@ -195,6 +199,8 @@ module aq_djpeg(
 		.DataIn				( JpegData			),
 		.JpegComp				( JpegComp			),
 		.JpegProgressive        ( JpegProgressive   ),
+		.SubSamplingW           ( SubSamplingW      ),
+		.SubSamplingH           ( SubSamplingH      ),
 
 		// Output decode data
 		.DecodeUseBit			( UseBit			),
@@ -248,6 +254,8 @@ module aq_djpeg(
 
 		.ProcessInit		( JpegDecodeIdle	),
 		.JpegComp			( JpegComp			),
+		.SubSamplingW       ( SubSamplingW      ),
+		.SubSamplingH       ( SubSamplingH      ),
 
 		.DataInEnable		( DctEnable		),
 		.DataInPage		( DctPage			),
