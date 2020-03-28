@@ -43,12 +43,14 @@ module aq_djpeg(
 	wire [31:0]		JpegData;
 	wire			JpegDataEnable;
 	wire			JpegDecodeIdle;
+	wire            JpegDataEnd;
 
 	wire			UseBit;
 	wire [6:0]		UseWidth;
 	wire			UseByte;
 	wire			UseWord;
 
+	wire			FetchImageEnable;
 	wire			ImageEnable;
 	wire			EnableFF00;
 	wire			DataInFull;
@@ -75,9 +77,10 @@ module aq_djpeg(
 		// DataOut
 		.DataOut			( JpegData			),
 		.DataOutEnable	( JpegDataEnableW	),
+		.DataOutEnd         ( JpegDataEnd       ),
 
 		//
-		.ImageEnable		( ImageEnable		),
+		.ImageEnable		( FetchImageEnable  ),
 		.ProcessIdle		( JpegDecodeIdle	),
 
 		// UseData
@@ -112,6 +115,7 @@ module aq_djpeg(
 	wire [1:0]      SubSamplingW;
 	wire [1:0]      SubSamplingH;
 
+
 	aq_djpeg_fsm u_jpeg_fsm(
 		.rst				( rst				),
 		.clk				( clk				),
@@ -119,6 +123,7 @@ module aq_djpeg(
 		// From FIFO
 		.DataInEnable		( JpegDataEnable	),
 		.DataIn			( JpegData			),
+		.DataInEnd          ( JpegDataEnd       ),
 
 		.JpegDecodeIdle	( JpegDecodeIdle	),
 
@@ -150,6 +155,7 @@ module aq_djpeg(
 
 		//
 		.ImageEnable		( ImageEnable		),
+		.FetchImageEnable	( FetchImageEnable	),
 		.JpegComp			( JpegComp			),
 		.JpegProgressive    ( JpegProgressive   ),
 		.OutputSubSamplingW ( SubSamplingW      ),

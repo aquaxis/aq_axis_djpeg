@@ -25,6 +25,7 @@ module aq_djpeg_fsm(
 	// From FIFO
 	input			DataInEnable,
 	input [31:0]	DataIn,
+	input           DataInEnd,
 
 	output			JpegDecodeIdle,	// Deocder Process Idle(1:Idle, 0:Run)
 
@@ -57,6 +58,7 @@ module aq_djpeg_fsm(
 
 	//
 	output			ImageEnable,
+	output          FetchImageEnable,
 	output reg [2:0]	JpegComp,
 	output          JpegProgressive,
 	output [1:0]    OutputSubSamplingW,
@@ -107,6 +109,8 @@ module aq_djpeg_fsm(
 	localparam S_SOFReadCompColor2	= 5'd28;
 	localparam S_SOFMakeBlock0		= 5'd29;
 	localparam S_SOFMakeBlock1		= 5'd30;
+	// EOI Segment
+	localparam S_WaitEOI            = 5'd31;
 
 	reg [4:0]		State;
 	//wire			ImageEnable;
@@ -135,6 +139,7 @@ module aq_djpeg_fsm(
     reg             JpegProgressive;
 
 	reg				ImageEnable;
+	reg				FetchImageEnable;
 
 	always @(posedge clk or negedge rst) begin
 		if(!rst) begin
@@ -158,6 +163,7 @@ module aq_djpeg_fsm(
 			SubSamplingW      <= 2'd0;
 			SubSamplingH      <= 2'd0;
 			ImageEnable		<= 1'b0;
+			FetchImageEnable	<= 1'b0;
 		end else begin
 			case(State)
 				S_Idle: begin
@@ -359,6 +365,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State			<= S_ImageData;
 						ImageEnable	<= 1'b1;
+						FetchImageEnable <= 1'b1;
 					end
 				end
 
@@ -461,8 +468,15 @@ module aq_djpeg_fsm(
 				// Image Process
 				S_ImageData: begin
 					if(OutEnable & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
-						State			<= S_Idle;
+						State			<= S_WaitEOI;
 						ImageEnable	<= 1'b0;
+					end
+				end
+
+				S_WaitEOI: begin
+					if(DataInEnd) begin
+						State           <= S_Idle;
+						FetchImageEnable <= 1'b0;
 					end
 				end
 			endcase
@@ -474,7 +488,8 @@ module aq_djpeg_fsm(
 												(State == S_DHTTable) | (State == S_DHTMakeHm0) | (State == S_DHTReadTable) |
 												(State == S_SOSRead0) | (State == S_SOSRead2) | (State == S_SOSRead3) | (State == S_SOSRead4) |
 												(State == S_SOFRead0) | (State == S_SOFReadComp) |
-												(State == S_SOFReadComp) | (State == S_SOFReadCompColor0) | (State == S_SOFReadCompColor1) | (State == S_SOFReadCompColor2)
+												(State == S_SOFReadComp) | (State == S_SOFReadCompColor0) | (State == S_SOFReadCompColor1) | (State == S_SOFReadCompColor2) |
+												(State == S_WaitEOI)
 												);
 	assign UseWord = (DataInEnable == 1'b1) & ((State == S_GetMarker) |
 												(State == S_APPLength) |

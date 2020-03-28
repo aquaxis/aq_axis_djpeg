@@ -31,6 +31,7 @@ module aq_djpeg_regdata(
 	// DataOut
 	output [31:0]	DataOut,			// Data Out
 	output			DataOutEnable,	// Data Out Enable
+	output          DataOutEnd,
 
 	input			ImageEnable,
 	input			ProcessIdle,
@@ -269,5 +270,6 @@ module aq_djpeg_regdata(
 	end
 
 	assign DataOutEnable = (PreEnable == 1'b0)?OutEnable:1'b0;
+	assign DataOutEnd = DataEnd;
 
 endmodule
