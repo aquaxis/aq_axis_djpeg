@@ -33,6 +33,7 @@ module aq_djpeg_fsm(
 	output [15:0]	OutWidth,
 	output [15:0]	OutHeight,
 	output [11:0]	OutBlockWidth,
+	output [11:0]	OutBlockHeight,
 	input			OutEnable,
 	input [15:0]	OutPixelX,
 	input [15:0]	OutPixelY,
@@ -464,7 +465,7 @@ module aq_djpeg_fsm(
 						JpegBlockHeight	<= JpegBlockHeight >> 3;
 					end
 				end
-
+	
 				// Image Process
 				S_ImageData: begin
 					if(OutEnable & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
@@ -505,6 +506,7 @@ module aq_djpeg_fsm(
 	assign OutWidth		= JpegWidth;
 	assign OutHeight		= JpegHeight;
 	assign OutBlockWidth	= JpegBlockWidth[11:0];
+	assign OutBlockHeight   = JpegBlockHeight[11:0];
 	assign OutputSubSamplingW = SubSamplingW;
 	assign OutputSubSamplingH = SubSamplingH;
 

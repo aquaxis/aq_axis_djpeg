@@ -50,6 +50,8 @@ module aq_djpeg_huffman(
 	input [31:0]	DataIn,				// Data In
 	input [2:0]	JpegComp,
     input           JpegProgressive,
+	input [11:0]    JpegBlockWidth,
+	input [11:0]    JpegBlockHeight,
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
     
@@ -106,8 +108,42 @@ module aq_djpeg_huffman(
 	wire [5:0]		HmDecCount;
 	wire [15:0]	 HmDecData;
 
+	wire            HmInEnable;
+
 	wire			HmOutEnable;
 	wire [2:0]		HmOutColor;
+
+	wire            HmDecodeNextBlock;
+	reg  [11:0]     HmDecodeBlockX;
+	reg  [11:0]     HmDecodeBlockY;
+	reg             HmDecodeFinish;
+
+	always @(posedge clk or negedge rst) begin
+		if(!rst) begin
+			HmDecodeBlockX <= 12'd0;
+			HmDecodeBlockY <= 12'd0;
+			HmDecodeFinish <= 1'b0;
+		end else begin
+			if(ProcessInit) begin
+				HmDecodeBlockX <= 12'd0;
+				HmDecodeBlockY <= 12'd0;
+				HmDecodeFinish <= 1'b0;
+			end else if(HmDecodeNextBlock) begin
+					if(JpegBlockWidth == HmDecodeBlockX +1) begin
+						if(JpegBlockHeight == HmDecodeBlockY +1) begin
+							HmDecodeFinish <= 1'b1;
+						end else begin
+							HmDecodeBlockX <= 12'd0;
+							HmDecodeBlockY <= HmDecodeBlockY + 12'd1;
+						end
+					end else begin
+						HmDecodeBlockX <= HmDecodeBlockX + 12'd1;
+					end
+			end
+		end
+	end
+
+	assign HmInEnable = DataInEnable & (~HmDecodeFinish);
 
 	aq_djpeg_hm_decode u_jpeg_hm_decode(
 		.rst				( rst					),
@@ -122,7 +158,7 @@ module aq_djpeg_huffman(
 
 		// Huffman Decode
 		.DataInRun			( DataInRun			 ),
-		.DataInEnable		( DataInEnable		),
+		.DataInEnable		( HmInEnable    	),
 		.DataIn			( DataIn				),
 		.JpegComp			( JpegComp				),
 		.JpegProgressive    ( JpegProgressive       ),
@@ -145,6 +181,8 @@ module aq_djpeg_huffman(
 		.DataOutColor		( HmOutColor			),
 
 		// Output decode data
+		.DecodeNextBlock    ( HmDecodeNextBlock     ),
+
 		.DecodeUseBit		( DecodeUseBit			),
 		.DecodeUseWidth		( DecodeUseWidth		),
 

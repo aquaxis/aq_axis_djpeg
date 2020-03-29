@@ -65,7 +65,7 @@ module aq_djpeg_regdata(
 			CheckMode	<= 1'b0;
 			ImageReady	<= 1'b0;
 		end else begin
-			if(DataEnd == 1'b1 & ((ProcessIdle == 1'b1) | (RegWidth <= 48))) begin
+			if(DataEnd == 1'b1 & ProcessIdle == 1'b1) begin
 				RegData	<= 96'd0;
 				RegWidth	<= 7'd0;
 				CheckMode	<= 1'b0;

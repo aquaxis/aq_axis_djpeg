@@ -54,6 +54,7 @@ module aq_djpeg_hm_decode(
 	output [2:0]	DataOutColor,
 
 	// Output decode data
+	output          DecodeNextBlock,
 	output			DecodeUseBit,			// Used Data Bit
 	output [6:0]	DecodeUseWidth,		// Used Data Width
 	output			DecodeEnable,			// Data Out Enable
@@ -753,6 +754,10 @@ module aq_djpeg_hm_decode(
 
 	assign DqtColor			= ProcessColor[2];
 	assign DqtNumber			= ProcessCount[5:0];
+
+	assign DecodeNextBlock = (Process == Phase8) 
+						  && (JpegProgressive || (ProcessCount == 6'd63)) 
+						  && ((JpegComp == 3) ? (ProcessColor == 3'd5) : (ProcessColor == 3'd3));
 
 	assign DecodeUseBit		= Process == Phase7;
 	assign DecodeUseWidth	= UseWidth;

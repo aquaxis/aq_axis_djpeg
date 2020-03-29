@@ -112,6 +112,7 @@ module aq_djpeg(
 	wire [7:0]		HuffmanStart;
 
 	wire [11:0]		JpegBlockWidth;
+	wire [11:0]     JpegBlockHeight;
 	wire [2:0]		JpegComp;
 	wire [1:0]      SubSamplingW;
 	wire [1:0]      SubSamplingH;
@@ -131,6 +132,7 @@ module aq_djpeg(
 		.OutWidth			( OutWidth			),
 		.OutHeight			( OutHeight		),
 		.OutBlockWidth	( JpegBlockWidth	),
+		.OutBlockHeight	( JpegBlockHeight	),
 		.OutEnable			( OutEnable		),
 		.OutPixelX			( OutPixelX		),
 		.OutPixelY			( OutPixelY		),
@@ -206,6 +208,8 @@ module aq_djpeg(
 		.DataIn				( JpegData			),
 		.JpegComp				( JpegComp			),
 		.JpegProgressive        ( JpegProgressive   ),
+		.JpegBlockWidth         ( JpegBlockWidth    ),
+		.JpegBlockHeight        ( JpegBlockHeight   ),
 		.SubSamplingW           ( SubSamplingW      ),
 		.SubSamplingH           ( SubSamplingH      ),
 
@@ -273,6 +277,7 @@ module aq_djpeg(
 		.DataInBlockWidth	( JpegBlockWidth	),
 		.DataInFull		( DataInFull		),
 
+		.OutReady			( OutReady			),
 		.OutEnable			( ColorEnable		),
 		.OutPixelX			( ColorPixelX		),
 		.OutPixelY			( ColorPixelY		),

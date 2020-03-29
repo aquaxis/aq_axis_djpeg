@@ -169,6 +169,19 @@ module aq_djpeg_ycbcr2rgb(
 			g20r	<= 0;
 			b20r	<= 0;
 
+			PreEnable <= 1'b0;
+			PreCountX <= 16'h0000;
+			PreCountY <= 16'h0000;
+			Phase0Y   <= 9'h00;
+			Phase0Cb  <= 9'h00;
+			Phase0Cr  <= 9'h00;
+			Phase1Y   <= 9'h00;
+			Phase1Cb  <= 9'h00;
+			Phase1Cr  <= 9'h00;
+			Phase2Y   <= 9'h00;
+			Phase2Cb  <= 9'h00;
+			Phase2Cr  <= 9'h00;
+
 			Phase0Enable <= 1'b0;
 			Phase0CountX <= 16'h0000;
 			Phase0CountY <= 16'h0000;
