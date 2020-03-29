@@ -33,7 +33,8 @@ module aq_djpeg_ycbcr2rgb(
 	input [2:0]	InComp,
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
-	output [7:0]	InAddress,
+	output [7:0]	InAddressY,
+	output [7:0]    InAddressCbCr,
 	input [8:0]	InY,
 	input [8:0]	InCb,
 	input [8:0]	InCr,
@@ -101,7 +102,11 @@ module aq_djpeg_ycbcr2rgb(
 						);
 
 	assign InRead		= RunActive && OutReady;
-	assign InAddress	= RunCount;
+	assign InAddressY	= RunCount;
+	assign InAddressCbCr[7:5] = (RunSamplingH == 2'd2) ? RunCount[7:5] : RunCount[6:4];
+	assign InAddressCbCr[4] = 1'b0;
+	assign InAddressCbCr[3:1] = (RunSamplingW == 2'd2) ? RunCount[3:1] : RunCount[2:0];
+	assign InAddressCbCr[0] = 1'b0;
 
 	reg			PreEnable;
 	reg [15:0]	PreCountX;

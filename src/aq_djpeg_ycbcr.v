@@ -53,7 +53,8 @@ module aq_djpeg_ycbcr(
 	wire			ConvertRead;
 	wire            ConvertReadNext;
 	wire			ConvertBank;
-	wire [7:0]		ConvertAddress;
+	wire [7:0]		ConvertAddressY;
+	wire [7:0]		ConvertAddressCbCr;
 	wire [8:0]		DataY;
 	wire [8:0]		DataCb;
 	wire [8:0]		DataCr;
@@ -111,7 +112,8 @@ module aq_djpeg_ycbcr(
 		.DataInFull		( DataInFull		),
 
 		.DataOutEnable	( ConvertEnable	),
-		.DataOutAddress	( ConvertAddress	),
+		.DataOutAddressY	( ConvertAddressY	),
+		.DataOutAddressCbCr	( ConvertAddressCbCr),
 		.DataOutRead		( ConvertRead		),
 		.DataOutReadNext    ( ConvertReadNext   ),
 		.DataOutY			( DataY			),
@@ -165,7 +167,8 @@ module aq_djpeg_ycbcr(
 		.InComp	( JpegComp			),
 		.SubSamplingW( SubSamplingW     ),
 		.SubSamplingH( SubSamplingH     ),
-		.InAddress	( ConvertAddress	),
+		.InAddressY		( ConvertAddressY	),
+		.InAddressCbCr	( ConvertAddressCbCr),
 		.InY		( DataY			),
 		.InCb		( tDataCb			),
 		.InCr		( tDataCr			),

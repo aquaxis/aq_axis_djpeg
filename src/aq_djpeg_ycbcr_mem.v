@@ -35,7 +35,8 @@ module aq_djpeg_ycbcr_mem(
 	output			DataInFull,
 
 	output			DataOutEnable,
-	input [7:0]	DataOutAddress,
+	input [7:0]	DataOutAddressY,
+	input [7:0]	DataOutAddressCbCr,
 	input			DataOutRead,
 	input			DataOutReadNext,
 	output [8:0]	DataOutY,
@@ -188,25 +189,28 @@ module aq_djpeg_ycbcr_mem(
 	reg [8:0] ReadCrA;
 	reg [8:0] ReadCrB;
 
-	reg [7:0] RegAdrs;
+	reg [7:0] RegAdrsY;
+	reg [7:0] RegAdrsCbCr;
 
 	always @(posedge clk) begin
 		if (DataOutRead) begin
-			RegAdrs <= DataOutAddress;
+			RegAdrsY <= DataOutAddressY;
 
-			ReadYA	<= MemYA[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
-			ReadYB	<= MemYB[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
+			ReadYA	<= MemYA[{ReadBank, DataOutAddressY[7],DataOutAddressY[5:0]}];
+			ReadYB	<= MemYB[{ReadBank, DataOutAddressY[7],DataOutAddressY[5:0]}];
 
-			ReadCbA <= MemCbA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
-			ReadCrA <= MemCrA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			RegAdrsCbCr <= DataOutAddressCbCr;
 
-			ReadCbB <= MemCbB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
-			ReadCrB <= MemCrB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			ReadCbA <= MemCbA[{ReadBank, DataOutAddressCbCr[6:5],DataOutAddressCbCr[3:1]}];
+			ReadCrA <= MemCrA[{ReadBank, DataOutAddressCbCr[6:5],DataOutAddressCbCr[3:1]}];
+
+			ReadCbB <= MemCbB[{ReadBank, DataOutAddressCbCr[6:5],DataOutAddressCbCr[3:1]}];
+			ReadCrB <= MemCrB[{ReadBank, DataOutAddressCbCr[6:5],DataOutAddressCbCr[3:1]}];
 		end
 	end
 
 	assign DataOutEnable	= (WriteBank != ReadBank);
-	assign DataOutY		= (RegAdrs[6] ==1'b0)?ReadYA:ReadYB;
-	assign DataOutCb		= (RegAdrs[7] ==1'b0)?ReadCbA:ReadCbB;
-	assign DataOutCr		= (RegAdrs[7] ==1'b0)?ReadCrA:ReadCrB;
+	assign DataOutY		    = (RegAdrsY[6] ==1'b0)?ReadYA:ReadYB;
+	assign DataOutCb		= (RegAdrsCbCr[7] ==1'b0)?ReadCbA:ReadCbB;
+	assign DataOutCr		= (RegAdrsCbCr[7] ==1'b0)?ReadCrA:ReadCrB;
 endmodule
