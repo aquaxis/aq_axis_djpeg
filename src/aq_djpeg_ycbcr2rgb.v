@@ -81,7 +81,7 @@ module aq_djpeg_ycbcr2rgb(
 						RunActive	<= 1'b0;
 						RunCount	<= 8'd0;
 					end else begin
-							if ((RunComp == 3'd3) && (RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
+							if ((RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
 								RunCount    <= RunCount +8'd9;
 							else
 								RunCount	<= RunCount +8'd1;
@@ -92,8 +92,7 @@ module aq_djpeg_ycbcr2rgb(
 	end
 
 	assign InReadNext = (RunActive && OutReady &&
-							( (RunComp == 3'd1)                              ? (RunCount == 8'd255)
-							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd1) ? (RunCount == 8'd119)
+							( (RunSamplingW == 2'd1 && RunSamplingH == 2'd1) ? (RunCount == 8'd119)
 							: (RunSamplingW == 2'd2 && RunSamplingH == 2'd1) ? (RunCount == 8'd127)
 							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd2) ? (RunCount == 8'd247)
 							// : (RunSamplingW == 2'd2 && RunSamplingH == 2'd2) ? (RunCount == 8'd255)
@@ -203,15 +202,10 @@ module aq_djpeg_ycbcr2rgb(
 			if (OutReady) begin
 				// Pre
 				PreEnable <= RunActive;
-				if(RunComp == 3) begin
-					// コンポーネント数が3のとき、16x16が1ブロック
-					PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
-					PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
-				end else begin
-					// コンポーネント数が1のとき、32x8が1ブロック
-					PreCountX <= {RunBlockX[10:0],RunCount[7],RunCount[3:0]};
-					PreCountY <= {1'b0,RunBlockY[11:0],RunCount[6:4]};
-				end
+				
+				PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
+				PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
+
 
 				// Phase0
 				Phase0Enable	<= PreEnable;

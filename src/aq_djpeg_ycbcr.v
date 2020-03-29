@@ -83,10 +83,7 @@ module aq_djpeg_ycbcr(
 					default: DataInColor <= DataInColor +3'd1;
 					endcase
 				end else begin
-					if (DataInColor == 3'd3)
-						DataInColor <= 3'd0;
-					else
-						DataInColor	<= DataInColor +3'd1;
+					DataInColor <= 3'd0;
 				end
 			end
 		end

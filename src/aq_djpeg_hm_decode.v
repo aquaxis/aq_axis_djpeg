@@ -737,10 +737,7 @@ module aq_djpeg_hm_decode(
 							default: ProcessColor <= ProcessColor +3'd1;
 							endcase
 						end else begin
-							if (ProcessColor == 3'd3)
-								ProcessColor <= 3'd0;
-							else
-								ProcessColor	<= ProcessColor +3'd1;
+							ProcessColor <= 3'd0;
 						end
 					end
 				end	
@@ -757,7 +754,7 @@ module aq_djpeg_hm_decode(
 
 	assign DecodeNextBlock = (Process == Phase8) 
 						  && (JpegProgressive || (ProcessCount == 6'd63)) 
-						  && ((JpegComp == 3) ? (ProcessColor == 3'd5) : (ProcessColor == 3'd3));
+						  && ((JpegComp == 3) ? (ProcessColor == 3'd5) : (1'b1));
 
 	assign DecodeUseBit		= Process == Phase7;
 	assign DecodeUseWidth	= UseWidth;

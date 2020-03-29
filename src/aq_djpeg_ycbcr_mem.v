@@ -58,9 +58,7 @@ module aq_djpeg_ycbcr_mem(
 
 	wire WriteNext, ReadNext;
 	
-	assign WriteNext = (DataInEnable && (DataInAddress == 5'd63) && 
-							(((JpegComp == 3'd3) && (DataInColor == 3'd5)) ||
-							((JpegComp == 3'd1) && (DataInColor == 3'd3))))?1'b1:1'b0;
+	assign WriteNext = DataInEnable && (DataInAddress == 5'd63) && (((JpegComp == 3'd3) ? (DataInColor == 3'd5) : 1'b1));
 	assign ReadNext = DataOutReadNext;
 
 	// Bank

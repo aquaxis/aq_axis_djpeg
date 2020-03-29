@@ -444,27 +444,13 @@ module aq_djpeg_fsm(
 				end
 				S_SOFMakeBlock0:begin
 					State				<= S_SOFMakeBlock1;
-					if(JpegComp == 3) begin
-						// コンポーネント数�?3の場合�??16x16�?1ブロック
-						JpegBlockWidth  <= JpegBlockWidth  + ((SubSamplingW == 2'd2) ? 16'd15 : 16'd7);
-						JpegBlockHeight	<= JpegBlockHeight + ((SubSamplingH == 2'd2) ? 16'd15 : 16'd7);
-					end else begin
-						// コンポーネント数�?1の場合�??32x8�?1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	+16'd31;
-						JpegBlockHeight	<= JpegBlockHeight +16'd7;
-					end
+					JpegBlockWidth  <= JpegBlockWidth  + ((SubSamplingW == 2'd2) ? 16'd15 : 16'd7);
+					JpegBlockHeight	<= JpegBlockHeight + ((SubSamplingH == 2'd2) ? 16'd15 : 16'd7);
 				end
 				S_SOFMakeBlock1:begin
 					State				<= S_GetMarker;
-					if(JpegComp == 3) begin
-						// コンポーネント数�?3の場合�??16x16�?1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	>> ((SubSamplingW == 2'd2) ? 4 : 3);
-						JpegBlockHeight	<= JpegBlockHeight  >> ((SubSamplingH == 2'd2) ? 4 : 3);
-					end else begin
-						// コンポーネント数�?1の場合�??32x8�?1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	>> 5;
-						JpegBlockHeight	<= JpegBlockHeight >> 3;
-					end
+					JpegBlockWidth	<= JpegBlockWidth	>> ((SubSamplingW == 2'd2) ? 4 : 3);
+					JpegBlockHeight	<= JpegBlockHeight  >> ((SubSamplingH == 2'd2) ? 4 : 3);
 				end
 	
 				// Image Process
