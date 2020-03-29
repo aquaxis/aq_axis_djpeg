@@ -38,6 +38,7 @@ module aq_djpeg_ycbcr2rgb(
 	input [8:0]	InCb,
 	input [8:0]	InCr,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutPixelX,
 	output [15:0]	OutPixelY,
@@ -74,20 +75,22 @@ module aq_djpeg_ycbcr2rgb(
 				end
 				RunCount	<= 8'h00;
 			end else begin
-				if(InReadNext) begin
-					RunActive	<= 1'b0;
-					RunCount	<= 8'd0;
-				end else begin
-					if ((RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
-						RunCount    <= RunCount +8'd9;
-					else
-						RunCount	<= RunCount +8'd1;
+				if (OutReady) begin
+					if(InReadNext) begin
+						RunActive	<= 1'b0;
+						RunCount	<= 8'd0;
+					end else begin
+							if ((RunComp == 3'd3) && (RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
+								RunCount    <= RunCount +8'd9;
+							else
+								RunCount	<= RunCount +8'd1;
+					end
 				end
 			end
 		end
 	end
 
-	assign InReadNext = (RunActive &&
+	assign InReadNext = (RunActive && OutReady &&
 							( (RunComp == 3'd1)                              ? (RunCount == 8'd255)
 							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd1) ? (RunCount == 8'd119)
 							: (RunSamplingW == 2'd2 && RunSamplingH == 2'd1) ? (RunCount == 8'd127)
@@ -97,7 +100,7 @@ module aq_djpeg_ycbcr2rgb(
 							)
 						);
 
-	assign InRead		= RunActive;
+	assign InRead		= RunActive && OutReady;
 	assign InAddress	= RunCount;
 
 	reg			PreEnable;
@@ -179,62 +182,64 @@ module aq_djpeg_ycbcr2rgb(
 			Phase3CountX <= 16'h0000;
 			Phase3CountY <= 16'h0000;
 		end else begin
-			// Pre
-			PreEnable <= RunActive;
-			if(RunComp == 3) begin
-				// コンポーネント数が3のとき、16x16が1ブロック
-				PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
-				PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
-			end else begin
-				// コンポーネント数が1のとき、32x8が1ブロック
-				PreCountX <= {RunBlockX[10:0],RunCount[7],RunCount[3:0]};
-				PreCountY <= {1'b0,RunBlockY[11:0],RunCount[6:4]};
+			if (OutReady) begin
+				// Pre
+				PreEnable <= RunActive;
+				if(RunComp == 3) begin
+					// コンポーネント数が3のとき、16x16が1ブロック
+					PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
+					PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
+				end else begin
+					// コンポーネント数が1のとき、32x8が1ブロック
+					PreCountX <= {RunBlockX[10:0],RunCount[7],RunCount[3:0]};
+					PreCountY <= {1'b0,RunBlockY[11:0],RunCount[6:4]};
+				end
+
+				// Phase0
+				Phase0Enable	<= PreEnable;
+				Phase0CountX	<= PreCountX;
+				Phase0CountY	<= PreCountY;
+				Phase0Y		<= DataY;
+				Phase0Cb		<= DataCb;
+				Phase0Cr		<= DataCr;
+
+				// Phase1
+				Phase1Enable	<= Phase0Enable;
+				Phase1CountX	<= Phase0CountX;
+				Phase1CountY	<= Phase0CountY;
+
+				rgb00r <= 32'h02000000 + {Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8:0],18'h0000};
+				r00r	<= Phase0Cr * C_RR;
+				g00r	<= Phase0Cb * C_GB;
+				g01r	<= Phase0Cr * C_GR;
+				b00r	<= Phase0Cb * C_BB;
+
+				Phase1Y	<= Phase0Y;
+				Phase1Cb	<= Phase0Cb;
+				Phase1Cr	<= Phase0Cr;
+
+				// Phase2
+				Phase2Enable	<= Phase1Enable;
+				Phase2CountX	<= Phase1CountX;
+				Phase2CountY	<= Phase1CountY;
+
+				r10r	<= rgb00r + r00r;
+				g10r	<= rgb00r - g00r;
+				g11r	<= g01r;
+				b10r	<= rgb00r + b00r;
+
+				Phase2Y	<= Phase1Y;
+				Phase2Cb	<= Phase1Cb;
+				Phase2Cr	<= Phase1Cr;
+
+				// Phase3
+				Phase3Enable	<= Phase2Enable;
+				Phase3CountX	<= Phase2CountX;
+				Phase3CountY	<= Phase2CountY;
+				r20r	<= r10r;
+				g20r	<= g10r - g11r;
+				b20r	<= b10r;
 			end
-
-			// Phase0
-			Phase0Enable	<= PreEnable;
-			Phase0CountX	<= PreCountX;
-			Phase0CountY	<= PreCountY;
-			Phase0Y		<= DataY;
-			Phase0Cb		<= DataCb;
-			Phase0Cr		<= DataCr;
-
-			// Phase1
-			Phase1Enable	<= Phase0Enable;
-			Phase1CountX	<= Phase0CountX;
-			Phase1CountY	<= Phase0CountY;
-
-			rgb00r <= 32'h02000000 + {Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8:0],18'h0000};
-			r00r	<= Phase0Cr * C_RR;
-			g00r	<= Phase0Cb * C_GB;
-			g01r	<= Phase0Cr * C_GR;
-			b00r	<= Phase0Cb * C_BB;
-
-			Phase1Y	<= Phase0Y;
-			Phase1Cb	<= Phase0Cb;
-			Phase1Cr	<= Phase0Cr;
-
-			// Phase2
-			Phase2Enable	<= Phase1Enable;
-			Phase2CountX	<= Phase1CountX;
-			Phase2CountY	<= Phase1CountY;
-
-			r10r	<= rgb00r + r00r;
-			g10r	<= rgb00r - g00r;
-			g11r	<= g01r;
-			b10r	<= rgb00r + b00r;
-
-			Phase2Y	<= Phase1Y;
-			Phase2Cb	<= Phase1Cb;
-			Phase2Cr	<= Phase1Cr;
-
-			// Phase3
-			Phase3Enable	<= Phase2Enable;
-			Phase3CountX	<= Phase2CountX;
-			Phase3CountY	<= Phase2CountY;
-			r20r	<= r10r;
-			g20r	<= g10r - g11r;
-			b20r	<= b10r;
 		end
 	end
 

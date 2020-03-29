@@ -68,6 +68,7 @@ module aq_axis_djpeg
 
   // AXI Stream output
   output [31:0] M_AXIS_TDATA,
+  output [47:0] M_AXIS_TUSER,
   output        M_AXIS_TKEEP,
   output        M_AXIS_TLAST,
   input         M_AXIS_TREADY,
@@ -120,19 +121,24 @@ wire [7:0] OutR, OutG, OutB;
     .PIXELY         ( OutPixelY[15:0] )
   );
 
+wire JpegInHandshake;
+
+assign JpegInHandshake = S_AXIS_TVALID & S_AXIS_TREADY;
+
 aq_djpeg u_aq_djpeg(
   .rst            ( ~JpegDecodeRst  ),
   .clk            ( TCLK     ),
 
   // From FIFO
   .DataIn         ( S_AXIS_TDATA[31:0]  ),
-  .DataInEnable   ( S_AXIS_TVALID   ),
+  .DataInEnable   ( JpegInHandshake   ),
   .DataInRead     (),
   .DataInReq      ( S_AXIS_TREADY   ),
 
   .JpegDecodeIdle ( JpegDecodeIdle  ),
   .JpegProgressive( JpegProgressive  ),
 
+  .OutReady       ( M_AXIS_TREADY   ),
   .OutEnable      ( M_AXIS_TVALID   ),
   .OutWidth       ( OutWidth[15:0]  ),
   .OutHeight      ( OutHeight[15:0] ),
@@ -147,6 +153,6 @@ assign M_AXIS_TKEEP = 1'b0;
 assign M_AXIS_TLAST = (OutPixelX == (OutWidth - 1)) && (OutPixelY == (OutHeight - 1));
 assign M_AXIS_TSTRB = 4'b1111;
 assign M_AXIS_TDATA[31:0] = {8'd0, OutR[7:0], OutG[7:0], OutB[7:0]};
-//assign M_AXIS_TDATA[31:0] = {OutPixelY[15:0], OutPixelX[15:0]};
+assign M_AXIS_TUSER[47:0] = {OutWidth[15:0], OutPixelY[15:0], OutPixelX[15:0]};
 
 endmodule

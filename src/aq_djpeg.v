@@ -31,6 +31,7 @@ module aq_djpeg(
 	output			JpegDecodeIdle,	// Decoder Process Idle(1:Idle, 0:Run)
 	output          JpegProgressive,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutWidth,
 	output [15:0]	OutHeight,

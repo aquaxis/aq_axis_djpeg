@@ -36,6 +36,7 @@ module aq_djpeg_ycbcr(
 	input [11:0]	DataInBlockWidth,
 	output			DataInFull,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutPixelX,
 	output [15:0]	OutPixelY,
@@ -167,6 +168,7 @@ module aq_djpeg_ycbcr(
 		.InCb		( tDataCb			),
 		.InCr		( tDataCr			),
 
+		.OutReady   ( OutReady      ),
 		.OutEnable	( OutEnable		),
 		.OutPixelX	( OutPixelX		),
 		.OutPixelY	( OutPixelY		),
