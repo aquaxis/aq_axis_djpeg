@@ -25,6 +25,7 @@ module aq_djpeg_ycbcr2rgb(
 	input			clk,
 	input			rst,
 
+	input           DataInit,
 	input			InEnable,
 	output			InRead,
 	output          InReadNext,
@@ -65,7 +66,10 @@ module aq_djpeg_ycbcr2rgb(
 			RunSamplingW <= 2'b0;
 			RunSamplingH <= 2'b0;
 		end else begin
-			if(RunActive == 1'b0) begin
+			if(DataInit) begin
+				RunActive	<= 1'b0;
+				RunCount	<= 8'h00;
+			end if(RunActive == 1'b0) begin
 				if(InEnable == 1'b1) begin
 					RunActive	<= 1'b1;
 					RunBlockX	<= InBlockX;
@@ -201,14 +205,14 @@ module aq_djpeg_ycbcr2rgb(
 		end else begin
 			if (OutReady) begin
 				// Pre
-				PreEnable <= RunActive;
+				PreEnable <= (DataInit) ? 1'b0 : RunActive;
 				
 				PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
 				PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
 
 
 				// Phase0
-				Phase0Enable	<= PreEnable;
+				Phase0Enable	<= (DataInit) ? 1'b0 : PreEnable;
 				Phase0CountX	<= PreCountX;
 				Phase0CountY	<= PreCountY;
 				Phase0Y		<= DataY;
@@ -216,7 +220,7 @@ module aq_djpeg_ycbcr2rgb(
 				Phase0Cr		<= DataCr;
 
 				// Phase1
-				Phase1Enable	<= Phase0Enable;
+				Phase1Enable	<= (DataInit) ? 1'b0 : Phase0Enable;
 				Phase1CountX	<= Phase0CountX;
 				Phase1CountY	<= Phase0CountY;
 
@@ -231,7 +235,7 @@ module aq_djpeg_ycbcr2rgb(
 				Phase1Cr	<= Phase0Cr;
 
 				// Phase2
-				Phase2Enable	<= Phase1Enable;
+				Phase2Enable	<= (DataInit) ? 1'b0 : Phase1Enable;
 				Phase2CountX	<= Phase1CountX;
 				Phase2CountY	<= Phase1CountY;
 
@@ -245,7 +249,7 @@ module aq_djpeg_ycbcr2rgb(
 				Phase2Cr	<= Phase1Cr;
 
 				// Phase3
-				Phase3Enable	<= Phase2Enable;
+				Phase3Enable	<= (DataInit) ? 1'b0 : Phase2Enable;
 				Phase3CountX	<= Phase2CountX;
 				Phase3CountY	<= Phase2CountY;
 				r20r	<= r10r;
@@ -255,7 +259,7 @@ module aq_djpeg_ycbcr2rgb(
 		end
 	end
 
-	assign OutEnable	= Phase3Enable;
+	assign OutEnable	= (DataInit) ? 1'b0 : Phase3Enable;
 	assign OutPixelX	= Phase3CountX;
 	assign OutPixelY	= Phase3CountY;
 	assign OutR		= (r20r[31])?8'h00:(r20r[26])?8'hFF:r20r[25:18];

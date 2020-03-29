@@ -156,6 +156,7 @@ module aq_djpeg_ycbcr(
 		.rst		( rst				),
 		.clk		( clk				),
 
+		.DataInit	( ProcessInit		),
 		.InEnable	( ConvertEnable	),
 		.InRead	( ConvertRead		),
 		.InReadNext (ConvertReadNext),

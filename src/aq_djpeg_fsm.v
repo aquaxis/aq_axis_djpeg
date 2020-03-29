@@ -400,7 +400,7 @@ module aq_djpeg_fsm(
 				end
 				S_SOFReadComp: begin
 					// コンポーネント数
-					// 1:グレースケー�?
+					// 1:グレースケール
 					// 3:YCbCr or YIQ
 					// 4:CMYK
 					if(DataInEnable == 1'b1) begin
