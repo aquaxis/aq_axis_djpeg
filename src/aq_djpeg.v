@@ -175,6 +175,8 @@ module aq_djpeg(
 	wire			HmRead;
 	wire [4:0]		HmAddress;
 
+	wire            HmNextBlock;
+
 	wire [15:0]		HmDataA, HmDataB;
 
 	aq_djpeg_huffman u_jpeg_huffman(
@@ -214,6 +216,7 @@ module aq_djpeg(
 		.SubSamplingH           ( SubSamplingH      ),
 
 		// Output decode data
+		.DecodeNextBlock        ( HmNextBlock       ),
 		.DecodeUseBit			( UseBit			),
 		.DecodeUseWidth		( UseWidth			),
 
@@ -268,6 +271,7 @@ module aq_djpeg(
 		.SubSamplingW       ( SubSamplingW      ),
 		.SubSamplingH       ( SubSamplingH      ),
 
+		.DecoderNextBlock   ( HmNextBlock   ),
 		.DataInEnable		( DctEnable		),
 		.DataInPage		( DctPage			),
 		.DataInCount		( DctCount			),

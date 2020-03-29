@@ -27,6 +27,7 @@ module aq_djpeg_ycbcr(
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
 
+	input           DecoderNextBlock,
 	input			DataInEnable,
 	input [2:0]	DataInPage,
 	input [1:0]	DataInCount,
@@ -100,6 +101,7 @@ module aq_djpeg_ycbcr(
 		.DataInit			( ProcessInit		),
 		.JpegComp			( JpegComp			),
 
+		.DecoderNextBlock   ( DecoderNextBlock  ),
 		.DataInEnable		( DataInEnable	),
 		.DataInColor		( DataInColor		),
 		.DataInPage		( DataInPage		),

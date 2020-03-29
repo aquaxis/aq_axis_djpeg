@@ -55,6 +55,7 @@ module aq_djpeg_huffman(
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
     
+	output          DecodeNextBlock,
 	output			DecodeUseBit,
 	output [6:0]	DecodeUseWidth,
 
@@ -143,6 +144,7 @@ module aq_djpeg_huffman(
 		end
 	end
 
+	assign DecodeNextBlock = HmDecodeNextBlock;
 	assign HmInEnable = DataInEnable & (~HmDecodeFinish);
 
 	aq_djpeg_hm_decode u_jpeg_hm_decode(

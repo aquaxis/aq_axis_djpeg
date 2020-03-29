@@ -25,6 +25,7 @@ module aq_djpeg_ycbcr_mem(
 	input			DataInit,
 	input [2:0]	JpegComp,
 
+	input       DecoderNextBlock,
 	input			DataInEnable,
 	input [2:0]	DataInColor,
 	input [2:0]	DataInPage,
@@ -48,7 +49,7 @@ module aq_djpeg_ycbcr_mem(
 	reg [8:0]		MemCrA [0:127];
 	reg [8:0]		MemCrB [0:127];
 
-	reg [1:0]		WriteBank, ReadBank;
+	reg [1:0]		DecoderBank, WriteBank, ReadBank;
 
 	wire [5:0]		DataInAddress;
 
@@ -64,9 +65,16 @@ module aq_djpeg_ycbcr_mem(
 	// Bank
 	always @(posedge clk or negedge rst) begin
 		if(!rst) begin
+			DecoderBank <= 2'd0;
 			WriteBank	<= 2'd0;
 			ReadBank	<= 2'd0;
 		end else begin
+			if(DataInit) begin
+				DecoderBank	<= 2'd0;
+			end else if(DecoderNextBlock == 1'b1) begin
+//				(DataInColor == 3'd5)) begin
+				DecoderBank	<= DecoderBank + 2'd1;
+			end
 			if(DataInit) begin
 				WriteBank	<= 2'd0;
 			end else if(WriteNext == 1'b1) begin
@@ -94,7 +102,7 @@ module aq_djpeg_ycbcr_mem(
 			end else begin
 				case(state)
 					S_IDLE: begin
-						if((WriteNext == 1'b1) && (ReadBank == (WriteBank +2'd2)) && (ReadNext == 1'b0)) begin
+						if((DecoderNextBlock == 1'b1) && (ReadBank == DecoderBank +2'd1) && (ReadNext == 1'b0)) begin
 							state <= S_FULL;
 						end
 					end
@@ -183,16 +191,18 @@ module aq_djpeg_ycbcr_mem(
 	reg [7:0] RegAdrs;
 
 	always @(posedge clk) begin
-		RegAdrs <= DataOutAddress;
+		if (DataOutRead) begin
+			RegAdrs <= DataOutAddress;
 
-		ReadYA	<= MemYA[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
-		ReadYB	<= MemYB[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
+			ReadYA	<= MemYA[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
+			ReadYB	<= MemYB[{ReadBank, DataOutAddress[7],DataOutAddress[5:0]}];
 
-		ReadCbA <= MemCbA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
-		ReadCrA <= MemCrA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			ReadCbA <= MemCbA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			ReadCrA <= MemCrA[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
 
-		ReadCbB <= MemCbB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
-		ReadCrB <= MemCrB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			ReadCbB <= MemCbB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+			ReadCrB <= MemCrB[{ReadBank, DataOutAddress[6:5],DataOutAddress[3:1]}];
+		end
 	end
 
 	assign DataOutEnable	= (WriteBank != ReadBank);
