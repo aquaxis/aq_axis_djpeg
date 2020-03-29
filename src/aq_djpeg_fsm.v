@@ -35,6 +35,7 @@ module aq_djpeg_fsm(
 	output [11:0]	OutBlockWidth,
 	output [11:0]	OutBlockHeight,
 	input			OutEnable,
+	input			OutReady,
 	input [15:0]	OutPixelX,
 	input [15:0]	OutPixelY,
     
@@ -468,7 +469,7 @@ module aq_djpeg_fsm(
 	
 				// Image Process
 				S_ImageData: begin
-					if(OutEnable & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
+					if(OutEnable & OutReady & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
 						State			<= S_WaitEOI;
 						ImageEnable	<= 1'b0;
 					end

@@ -134,6 +134,7 @@ module aq_djpeg(
 		.OutBlockWidth	( JpegBlockWidth	),
 		.OutBlockHeight	( JpegBlockHeight	),
 		.OutEnable			( OutEnable		),
+		.OutReady			( OutReady		),
 		.OutPixelX			( OutPixelX		),
 		.OutPixelY			( OutPixelY		),
 
