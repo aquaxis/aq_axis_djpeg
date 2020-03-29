@@ -456,7 +456,10 @@ module aq_djpeg_fsm(
 				// Image Process
 				S_ImageData: begin
 					if(OutEnable & OutReady & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
-						State			<= S_WaitEOI;
+						if (DataInEnd)
+							State           <= S_Idle;
+						else
+							State			<= S_WaitEOI;
 						ImageEnable	<= 1'b0;
 					end
 				end
