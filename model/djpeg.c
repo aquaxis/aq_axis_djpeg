@@ -23,7 +23,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define log_printf(...) 
+#define log_printf(x, ...) printf(x, ##__VA_ARGS__)
+//#define log_printf(x, ...)
 
 unsigned int BuffIndex;	// JPEGデータの位置
 unsigned int BuffSize;	// JPEGデータの大きさ
@@ -51,6 +52,9 @@ unsigned char CompSample[4];	// コンポーネント
 unsigned char CompDQT[4];	// コンポーネントのDQTテーブル番号
 unsigned char CompDHT[4];	// コンポーネントのDHTテーブル番号
 unsigned char CompSampleX, CompSampleY;
+
+unsigned char use_processive;
+unsigned char use_reset_interval;
 
 // ジグザグテーブル
 int zigzag_table[]={
@@ -187,17 +191,75 @@ unsigned short get_word(unsigned char *buff){
 unsigned int get_data(unsigned char *buff){
 	unsigned char str = 0;
 	unsigned int data = 0;
+	unsigned char nbyte = 0;
+	
 	str = get_byte(buff);
-	if(str ==0xff) if(get_byte(buff)== 0x00) str = 0xFF; else str = 0x00;
+	while(str == 0xff) {
+		nbyte = get_byte(buff);
+		if(nbyte == 0x00) {
+			str = 0xFF;
+			break;
+		}
+		else if ((nbyte & 0xD0) == 0xD0) {
+			str = get_byte(buff);
+			log_printf("--RST-0 %d\n", nbyte & 0x0F);
+		}
+		else {
+			str = 0x00;
+			break;
+		}
+	}
 	data = str;
 	str = get_byte(buff);
-	if(str ==0xff) if(get_byte(buff)== 0x00) str = 0xFF; else str = 0x00;
+	while(str == 0xff) {
+		nbyte = get_byte(buff);
+		if(nbyte == 0x00) {
+			str = 0xFF;
+			break;
+		}
+		else if ((nbyte & 0xD0) == 0xD0) {
+			str = get_byte(buff);
+			log_printf("--RST-1 %d\n", nbyte & 0x0F);
+		}
+		else {
+			str = 0x00;
+			break;
+		}
+	}
 	data = (data << 8) | str;
 	str = get_byte(buff);
-	if(str ==0xff) if(get_byte(buff)== 0x00) str = 0xFF; else str = 0x00;
+	while(str == 0xff) {
+		nbyte = get_byte(buff);
+		if(nbyte == 0x00) {
+			str = 0xFF;
+			break;
+		}
+		else if ((nbyte & 0xD0) == 0xD0) {
+			str = get_byte(buff);
+			log_printf("--RST-2 %d\n", nbyte & 0x0F);
+		}
+		else {
+			str = 0x00;
+			break;
+		}
+	}
 	data = (data << 8) | str;
 	str = get_byte(buff);
-	if(str ==0xff) if(get_byte(buff)== 0x00) str = 0xFF; else str = 0x00;
+	while(str == 0xff) {
+		nbyte = get_byte(buff);
+		if(nbyte == 0x00) {
+			str = 0xFF;
+			break;
+		}
+		else if ((nbyte & 0xD0) == 0xD0) {
+			str = get_byte(buff);
+			log_printf("--RST-3 %d\n", nbyte & 0x0F);
+		}
+		else {
+			str = 0x00;
+			break;
+		}
+	}
 	data = (data << 8) | str;
 	//log_printf(" Get Data: %08x\n",data);
 	return data;
@@ -265,14 +327,19 @@ void GetDQT(unsigned char *buff){
 	unsigned char str;
 	unsigned int i;
 	unsigned int tablenum;
-
-	data = get_word(buff);
-	str = get_byte(buff); // テーブル番号
 	
-	log_printf("*** DQT Table %d\n",str);
-	for(i=0;i<64;i++){
-    TableDQT[str][i] = get_byte(buff);
-    log_printf(" %2d: %2x\n",i,TableDQT[str][i]);
+	data = get_word(buff);
+	log_printf("*** DQT Table x%d ***\n", (data-2)/65);
+	data -= 2;
+	data /= 65;
+	while (data--) {
+		str = get_byte(buff); // テーブル番号
+		
+		log_printf("*** DQT Table %d\n",str);
+		for(i=0;i<64;i++){
+		TableDQT[str][i] = get_byte(buff);
+		log_printf(" %2d: %2x\n",i,TableDQT[str][i]);
+		}
 	}
 }
 
@@ -288,47 +355,57 @@ void GetDHT(unsigned char *buff){
 	unsigned int tablenum;
 
 	data = get_word(buff);
-	str = get_byte(buff);
-
-	switch(str){
-	case 0x00:
-		// Y直流成分
-		tablenum = 0x00;
-		break;
-	case 0x10:
-		// Y交流成分
-		tablenum = 0x01;
-		break;
-	case 0x01:
-		// CbCr直流成分
-		tablenum = 0x02;
-		break;
-	case 0x11:
-		// CbCr交流成分
-		tablenum = 0x03;
-		break;
-	}
-
-	log_printf("*** DHT Table/Number %d\n",tablenum);
-	// テーブルを作成する
-	max = 0;
-	for(i=0;i<16;i++){
-		count = get_byte(buff);
-		TableHT[tablenum][i] = HuffmanData;
-		TableHN[tablenum][i] = max;
-		log_printf(" %2d: %4x,%2x\n",i,TableHT[tablenum][i],TableHN[tablenum][i]);
-		max = max + count;
-		while(!(count==0)){
-			HuffmanData += ShiftData;
-			count--;
+	data -= 2;
+	
+	while(data) {
+		ShiftData = 0x8000,HuffmanData =0x0000;
+		
+		str = get_byte(buff);
+		data -= 1;
+		
+		switch(str){
+		case 0x00:
+			// Y直流成分
+			tablenum = 0x00;
+			break;
+		case 0x10:
+			// Y交流成分
+			tablenum = 0x01;
+			break;
+		case 0x01:
+			// CbCr直流成分
+			tablenum = 0x02;
+			break;
+		case 0x11:
+			// CbCr交流成分
+			tablenum = 0x03;
+			break;
 		}
-		ShiftData = ShiftData >> 1; // 右に1bitシフトする
-	}
 
-	log_printf("*** DHT Table %d\n",tablenum);
-	for(i=0;i<max;i++){
-		TableDHT[tablenum][i] = get_byte(buff);
-		log_printf(" %2d: %2x\n",i,TableDHT[tablenum][i]);
+		log_printf("*** DHT Table/Number %d\n",tablenum);
+		// テーブルを作成する
+		max = 0;
+		for(i=0;i<16;i++){
+			count = get_byte(buff);
+			data -= 1;
+			
+			TableHT[tablenum][i] = HuffmanData;
+			TableHN[tablenum][i] = max;
+			log_printf(" %2d: %4x,%2x\n",i,TableHT[tablenum][i],TableHN[tablenum][i]);
+			max = max + count;
+			while(!(count==0)){
+				HuffmanData += ShiftData;
+				count--;
+			}
+			ShiftData = ShiftData >> 1; // 右に1bitシフトする
+		}
+
+		log_printf("*** DHT Table %d\n",tablenum);
+		for(i=0;i<max;i++){
+			TableDHT[tablenum][i] = get_byte(buff);
+			data -= 1;
+			log_printf(" %2d: %2x\n",i,TableDHT[tablenum][i]);
+		}
 	}
 }
 
@@ -364,8 +441,8 @@ void GetSOF(unsigned char *buff){
 		CompSampleX = 1;
 		CompSampleY = 1;
 	}else{
-		CompSampleX =  CompSample[1]       & 0x0F;
-		CompSampleY = (CompSample[1] >> 4) & 0x0F;
+		CompSampleX = (CompSample[1] >> 4) & 0x0F;
+		CompSampleY =  CompSample[1]       & 0x0F;
 	}
 
 	// MCUのサイズを算出する(ひと塊分)
@@ -401,6 +478,19 @@ void GetSOS(unsigned char *buff){
 	str = get_byte(buff);
 	str = get_byte(buff);
 	str = get_byte(buff);
+}
+
+/*
+ * DRI処理
+ */
+void GetDRI(unsigned char *buff){
+	unsigned short data;
+	
+	data = get_word(buff); // Lp(レングス)
+	// APP0は読まなくてもいいので取り合えずレングス分スキップする
+	use_reset_interval = get_word(buff);
+	
+	log_printf("  DRI: %2d\n", use_reset_interval);
 }
 
 /*
@@ -475,7 +565,7 @@ void HuffmanDecode(unsigned char *buff, unsigned char table, int *BlockData){
 
 	log_printf(" Use Bit: %d\n",(i + DataCount +1));
 	BitCount += (i + DataCount +1); // 使用したビット数を加算する
-
+	
 	if(count ==0){
 		// DC成分の場合、データとなる
 		if(DataCount ==0) DataCode =0x0; // DataCountが0ならデータは0である
@@ -493,9 +583,14 @@ void HuffmanDecode(unsigned char *buff, unsigned char table, int *BlockData){
 		}else{
 			count += ZeroCount;
 			// 逆量子化＋ジグザグ
+			// fail at assigning value
 			BlockData[zigzag_table[count]] = DataCode * TableDQT[tabledqt][count];
 		}
 		count ++;
+	}
+	if (count > 0 && use_processive) {
+		BlockData[0] = BlockData[0] << 1;
+		break;
 	}
 	}
 }
@@ -517,12 +612,12 @@ void DctDecode(int *BlockIn, int *BlockOut){
 	int t0,t1,t2,t3,t4,t5,t6,t7;
 
   /* iDCT X方向 */
-	log_printf("-----------------------------\n");
-	log_printf(" iDCT(In)\n");
-	log_printf("-----------------------------\n");
-	for(i=0;i<64;i++){
-    log_printf("%2d: %8x\n",i,BlockIn[i]);
-	}
+	// log_printf("-----------------------------\n");
+	// log_printf(" iDCT(In)\n");
+	// log_printf("-----------------------------\n");
+	// for(i=0;i<64;i++){
+    // log_printf("%2d: %8x\n",i,BlockIn[i]);
+	// }
 
 	for(i=0;i<8;i++) {
 		s0 = (BlockIn[0] + BlockIn[4]) * C4_16;
@@ -534,14 +629,14 @@ void DctDecode(int *BlockIn, int *BlockOut){
 		s6 = (BlockIn[5] * C5_16) + (BlockIn[3] * C3_16);
 		s5 = (BlockIn[5] * C3_16) - (BlockIn[3] * C5_16);
 
-		log_printf("s0:%8x\n",s0);
-		log_printf("s1:%8x\n",s1);
-		log_printf("s2:%8x\n",s2);
-		log_printf("s3:%8x\n",s3);
-		log_printf("s4:%8x\n",s4);
-		log_printf("s5:%8x\n",s5);
-		log_printf("s6:%8x\n",s6);
-		log_printf("s7:%8x\n",s7);
+		// log_printf("s0:%8x\n",s0);
+		// log_printf("s1:%8x\n",s1);
+		// log_printf("s2:%8x\n",s2);
+		// log_printf("s3:%8x\n",s3);
+		// log_printf("s4:%8x\n",s4);
+		// log_printf("s5:%8x\n",s5);
+		// log_printf("s6:%8x\n",s6);
+		// log_printf("s7:%8x\n",s7);
 
 		t0 = s0 + s3;
 		t3 = s0 - s3;
@@ -552,20 +647,20 @@ void DctDecode(int *BlockIn, int *BlockOut){
 		t7 = s7 + s6;
 		t6 = s7 - s6;
 
-		log_printf("t0:%8x\n",t0);
-		log_printf("t1:%8x\n",t1);
-		log_printf("t2:%8x\n",t2);
-		log_printf("t3:%8x\n",t3);
-		log_printf("t4:%8x\n",t4);
-		log_printf("t5:%8x\n",t5);
-		log_printf("t6:%8x\n",t6);
-		log_printf("t7:%8x\n",t7);
+		// log_printf("t0:%8x\n",t0);
+		// log_printf("t1:%8x\n",t1);
+		// log_printf("t2:%8x\n",t2);
+		// log_printf("t3:%8x\n",t3);
+		// log_printf("t4:%8x\n",t4);
+		// log_printf("t5:%8x\n",t5);
+		// log_printf("t6:%8x\n",t6);
+		// log_printf("t7:%8x\n",t7);
 
 		s6 = (t5 + t6) * 181 / 256; // 1/sqrt(2)
 		s5 = (t6 - t5) * 181 / 256; // 1/sqrt(2)
 
-		log_printf("s5:%8x\n",s5);
-		log_printf("s6:%8x\n",s6);
+		// log_printf("s5:%8x\n",s5);
+		// log_printf("s6:%8x\n",s6);
 
 		*BlockIn++ = (t0 + t7) >> 11;
 		*BlockIn++ = (t1 + s6) >> 11;
@@ -580,12 +675,12 @@ void DctDecode(int *BlockIn, int *BlockOut){
 	BlockIn -= 64;
 
   /* iDCT Y方向 */
-	log_printf("-----------------------------\n");
-	log_printf(" iDCT(Middle)\n");
-	log_printf("-----------------------------\n");
-	for(i=0;i<64;i++){
-	log_printf("%2d: %8x\n",i,BlockIn[i]);
-	}
+	// log_printf("-----------------------------\n");
+	// log_printf(" iDCT(Middle)\n");
+	// log_printf("-----------------------------\n");
+	// for(i=0;i<64;i++){
+	// log_printf("%2d: %8x\n",i,BlockIn[i]);
+	// }
 
 	for(i=0;i<8;i++){
 		s0 = (BlockIn[ 0] + BlockIn[32]) * C4_16;
@@ -597,14 +692,14 @@ void DctDecode(int *BlockIn, int *BlockOut){
 		s6 = BlockIn[40] * C5_16 + BlockIn[24] * C3_16;
 		s5 = BlockIn[40] * C3_16 - BlockIn[24] * C5_16;
 
-		log_printf("s0:%8x\n",s0);
-		log_printf("s1:%8x\n",s1);
-		log_printf("s2:%8x\n",s2);
-		log_printf("s3:%8x\n",s3);
-		log_printf("s4:%8x\n",s4);
-		log_printf("s5:%8x\n",s5);
-		log_printf("s6:%8x\n",s6);
-		log_printf("s7:%8x\n",s7);
+		// log_printf("s0:%8x\n",s0);
+		// log_printf("s1:%8x\n",s1);
+		// log_printf("s2:%8x\n",s2);
+		// log_printf("s3:%8x\n",s3);
+		// log_printf("s4:%8x\n",s4);
+		// log_printf("s5:%8x\n",s5);
+		// log_printf("s6:%8x\n",s6);
+		// log_printf("s7:%8x\n",s7);
 
 		t0 = s0 + s3;
 		t1 = s1 + s2;
@@ -615,20 +710,20 @@ void DctDecode(int *BlockIn, int *BlockOut){
 		t6 = s7 - s6;
 		t7 = s6 + s7;
 
-		log_printf("t0:%8x\n",t0);
-		log_printf("t1:%8x\n",t1);
-		log_printf("t2:%8x\n",t2);
-		log_printf("t3:%8x\n",t3);
-		log_printf("t4:%8x\n",t4);
-		log_printf("t5:%8x\n",t5);
-		log_printf("t6:%8x\n",t6);
-		log_printf("t7:%8x\n",t7);
+		// log_printf("t0:%8x\n",t0);
+		// log_printf("t1:%8x\n",t1);
+		// log_printf("t2:%8x\n",t2);
+		// log_printf("t3:%8x\n",t3);
+		// log_printf("t4:%8x\n",t4);
+		// log_printf("t5:%8x\n",t5);
+		// log_printf("t6:%8x\n",t6);
+		// log_printf("t7:%8x\n",t7);
 
 		s5 = (t6 - t5) * 181 / 256; // 1/sqrt(2)
 		s6 = (t5 + t6) * 181 / 256; // 1/sqrt(2)
 
-		log_printf("s5:%8x\n",s5);
-		log_printf("s6:%8x\n",s6);
+		// log_printf("s5:%8x\n",s5);
+		// log_printf("s6:%8x\n",s6);
 
 		BlockOut[ 0] = ((t0 + t7) >> 15);
 		BlockOut[56] = ((t0 - t7) >> 15);
@@ -644,19 +739,19 @@ void DctDecode(int *BlockIn, int *BlockOut){
 	}
 	BlockOut-=8;
 
-	log_printf("-----------------------------\n");
-	log_printf(" iDCT(Out)\n");
-	log_printf("-----------------------------\n");
-	for(i=0;i<8;i++){
-    log_printf(" %2d: %04x;\n",i+ 0,BlockOut[i+ 0]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+56,BlockOut[i+56]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+ 8,BlockOut[i+ 8]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+48,BlockOut[i+48]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+16,BlockOut[i+16]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+40,BlockOut[i+40]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+24,BlockOut[i+24]&0xFFFF);
-    log_printf(" %2d: %04x;\n",i+32,BlockOut[i+32]&0xFFFF);
-	}
+	// log_printf("-----------------------------\n");
+	// log_printf(" iDCT(Out)\n");
+	// log_printf("-----------------------------\n");
+	// for(i=0;i<8;i++){
+    // log_printf(" %2d: %04x;\n",i+ 0,BlockOut[i+ 0]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+56,BlockOut[i+56]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+ 8,BlockOut[i+ 8]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+48,BlockOut[i+48]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+16,BlockOut[i+16]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+40,BlockOut[i+40]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+24,BlockOut[i+24]&0xFFFF);
+    // log_printf(" %2d: %04x;\n",i+32,BlockOut[i+32]&0xFFFF);
+	// }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -703,8 +798,8 @@ void DecodeYUV(int *y, int *cb, int *cr, unsigned char *rgb){
 	int p,i;
 
 	log_printf("----RGB----\n");
-	for(i=0;i<((CompCount>1)?256:64);i++){
-		p = ((int)(i/32) * 8) + ((int)((i % 16)/2));
+	for(i=0;i<((CompCount>1)?(64*CompSampleX*CompSampleY):64);i++){
+		p = ((int)(i/(8*CompSampleX*CompSampleY)) * 8) + ((int)((i % (8*CompSampleX))/CompSampleX));
 		r = 128 + y[i] + ((CompCount>1)?cr[p]*1.402:0);
 		r = (r & 0xffffff00) ? (r >> 24) ^ 0xff : r;
 		g = 128 + y[i] - ((CompCount>1)?cb[p]*0.34414:0) - ((CompCount>1)?cr[p]*0.71414:0);
@@ -728,19 +823,34 @@ void Decode(unsigned char *buff,unsigned char *rgb){
 	int BlockCr[256];
 	int x,y,i,p;
 
+	int blkcnt = 0;
+	
 	for(y=0;y<BuffBlockY;y++){
 		for(x=0;x<BuffBlockX;x++){
 			Decode411(buff,BlockY,BlockCb,BlockCr);	// 4:1:1のデコード
 			DecodeYUV(BlockY,BlockCb,BlockCr,rgb);		// YUV→RGB変換
-			for(i=0;i<((CompCount>1)?256:64);i++){
-				if((x*(8*CompSampleX)+(i%(8*CompSampleX))<BuffX) && (y*(8*CompSampleY)+i/(8*CompSampleY)<BuffY)){
-					p=y*(8*CompSampleY)*BuffX*3+x*(8*CompSampleX)*3+(int)(i/(8*CompSampleY))*BuffX*3+(i%(8*CompSampleX))*3;
+			for(i=0;i<((CompCount>1)?(64*CompSampleX*CompSampleY):64);i++){
+				if((x*(8*CompSampleX)+(i%(8*CompSampleX))<BuffX) && (y*(8*CompSampleY)+i/(8*CompSampleX)<BuffY)){
+					p=y*(8*CompSampleY)*BuffX*3+x*(8*CompSampleX)*3+(int)(i/(8*CompSampleX))*BuffX*3+(i%(8*CompSampleX))*3;
 					Buff[p+0] = rgb[i*3+0];
 					Buff[p+1] = rgb[i*3+1];
 					Buff[p+2] = rgb[i*3+2];
 			
-					log_printf("RGB[%4d,%4d]: %2x,%2x,%2x\n",x*(8*CompSampleX)+(i%(8*CompSampleX)),y*(8*CompSampleY)+i/(8*CompSampleY),rgb[i*3+2],rgb[i*3+1],rgb[i*3+0]);
+					log_printf("RGB[%4d,%4d]: %2x,%2x,%2x\n",x*(8*CompSampleX)+(i%(8*CompSampleX)),y*(8*CompSampleY)+i/(8*CompSampleX),rgb[i*3+2],rgb[i*3+1],rgb[i*3+0]);
 				}
+			}
+			blkcnt++;
+			if (use_reset_interval > 0 && blkcnt == use_reset_interval) {
+				log_printf("----INTV RST %4d", BitCount);
+				blkcnt = 0;
+				PreData[0] = 0;
+				PreData[1] = 0;
+				PreData[2] = 0;
+				if (BitCount & 0x07) {
+					BitCount = (BitCount | 0x07) + 1;
+				}
+				log_printf(" -> %4d\n", BitCount);
+				get_bit(buff);
 			}
 		}
 	}
@@ -776,6 +886,12 @@ void JpegDecode(unsigned char *buff){
 			case 0xFFC0: // SOF
 				log_printf("Header: SOF\n");
 				GetSOF(buff);
+				use_processive = 0;
+				break;
+			case 0xFFC2: // SOF2
+				log_printf("Header: SOF2\n");
+				GetSOF(buff);
+				use_processive = 1;
 				break;
 			case 0xFFDA: // SOS
 				log_printf("Header: SOS\n");
@@ -788,6 +904,10 @@ void JpegDecode(unsigned char *buff){
 				LineData = get_data(buff);
 				NextData = get_data(buff);
 				BitCount =0;
+				break;
+			case 0xFFDD: // DRI
+				log_printf("Header: DRI\n");
+				GetDRI(buff);
 				break;
 			case 0xFFD9: // EOI
 				log_printf("Header: EOI\n");
@@ -807,6 +927,7 @@ void JpegDecode(unsigned char *buff){
 			// 伸長(SOSが来ている)
 			log_printf("/****Image****/\n");
 			Decode(buff,RGB);
+			break;
 		}
 	}
 }
@@ -850,9 +971,10 @@ int main(int argc, char* argv[])
 	fread(buff,1,BuffSize,fp);					// バッファに読み込む
 	BuffIndex = 0;
 	JpegDecode(buff);								// JPEGデコードする
-	log_printf("Finished decode\n");
+	printf("Finished decode\n");
+	printf("Saving BMP -> %s, %d %d %d\n", argv[2],Buff,BuffX,BuffY);
 	BmpSave(argv[2],Buff,BuffX,BuffY,3);			// Bitmapに保存する
-	log_printf("Saved BMP\n");
+	printf("Saved BMP\n");
 
 	// 全て開放します
 	fclose(fp);

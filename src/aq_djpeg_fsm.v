@@ -63,6 +63,7 @@ module aq_djpeg_fsm(
 	output          FetchImageEnable,
 	output reg [2:0]	JpegComp,
 	output          JpegProgressive,
+	output reg [15:0]  JpegRestart,
 	output [1:0]    OutputSubSamplingW,
 	output [1:0]    OutputSubSamplingH,
 
@@ -75,46 +76,49 @@ module aq_djpeg_fsm(
 	// Read Maker from Jpeg Data
 	//--------------------------------------------------------------------------
 	// State Machine localparam
-	localparam S_Idle					= 5'd0;
-	localparam S_GetMarker			= 5'd1;
-	localparam S_ImageData			= 5'd2;
+	localparam S_Idle				= 6'd0;
+	localparam S_GetMarker			= 6'd1;
+	localparam S_ImageData			= 6'd2;
 	// APP Segment
-	localparam S_APPLength			= 5'd3;
-	localparam S_APPRead				= 5'd4;
+	localparam S_APPLength			= 6'd3;
+	localparam S_APPRead			= 6'd4;
 	// DQT Segment
-	localparam S_DQTLength			= 5'd5;
-	localparam S_DQTTable			= 5'd6;
-	localparam S_DQTRead				= 5'd7;
+	localparam S_DQTLength			= 6'd5;
+	localparam S_DQTTable			= 6'd6;
+	localparam S_DQTRead			= 6'd7;
 	// DHT Segmen
-	localparam S_DHTLength			= 5'd8;
-	localparam S_DHTTable			= 5'd9;
-	localparam S_DHTMakeHm0			= 5'd10;
-	localparam S_DHTMakeHm1			= 5'd11;
-	localparam S_DHTMakeHm2			= 5'd12;
-	localparam S_DHTReadTable		= 5'd13;
+	localparam S_DHTLength			= 6'd8;
+	localparam S_DHTTable			= 6'd9;
+	localparam S_DHTMakeHm0			= 6'd10;
+	localparam S_DHTMakeHm1			= 6'd11;
+	localparam S_DHTMakeHm2			= 6'd12;
+	localparam S_DHTReadTable		= 6'd13;
 	// SOS Segment
-	localparam S_SOSLength			= 5'd14;
-	localparam S_SOSRead0			= 5'd15;
-	localparam S_SOSRead1			= 5'd16;
-	localparam S_SOSRead2			= 5'd17;
-	localparam S_SOSRead3			= 5'd18;
-	localparam S_SOSRead4			= 5'd19;
+	localparam S_SOSLength			= 6'd14;
+	localparam S_SOSRead0			= 6'd15;
+	localparam S_SOSRead1			= 6'd16;
+	localparam S_SOSRead2			= 6'd17;
+	localparam S_SOSRead3			= 6'd18;
+	localparam S_SOSRead4			= 6'd19;
 	// SOF Segment
-	localparam S_SOFLength			= 5'd20;
-	localparam S_SOFRead0			= 5'd21;
-	localparam S_SOFReadY			= 5'd22;
-	localparam S_SOFReadX			= 5'd23;
-	localparam S_SOFReadComp			= 5'd24;
-	localparam S_SOFReadCompColor	= 5'd25;
-	localparam S_SOFReadCompColor0	= 5'd26;
-	localparam S_SOFReadCompColor1	= 5'd27;
-	localparam S_SOFReadCompColor2	= 5'd28;
-	localparam S_SOFMakeBlock0		= 5'd29;
-	localparam S_SOFMakeBlock1		= 5'd30;
+	localparam S_SOFLength			= 6'd20;
+	localparam S_SOFRead0			= 6'd21;
+	localparam S_SOFReadY			= 6'd22;
+	localparam S_SOFReadX			= 6'd23;
+	localparam S_SOFReadComp		= 6'd24;
+	localparam S_SOFReadCompColor	= 6'd25;
+	localparam S_SOFReadCompColor0	= 6'd26;
+	localparam S_SOFReadCompColor1	= 6'd27;
+	localparam S_SOFReadCompColor2	= 6'd28;
+	localparam S_SOFMakeBlock0		= 6'd29;
+	localparam S_SOFMakeBlock1		= 6'd30;
 	// EOI Segment
-	localparam S_WaitEOI            = 5'd31;
-
-	reg [4:0]		State;
+	localparam S_WaitEOI            = 6'd31;
+	// DRI Segment
+	localparam S_DRILength          = 6'd32;
+    localparam S_DRIRead            = 6'd33;
+    
+	reg [5:0]		State;
 	//wire			ImageEnable;
 	reg [15:0]		ReadCount;
 	reg [15:0]		TableReadCount;
@@ -142,6 +146,8 @@ module aq_djpeg_fsm(
 
 	reg				ImageEnable;
 	reg				FetchImageEnable;
+	
+	reg            LastDataEnable;
 
 	always @(posedge clk or negedge rst) begin
 		if(!rst) begin
@@ -152,24 +158,27 @@ module aq_djpeg_fsm(
 			JpegHeight			<= 16'd0;
 			ReadDqtTable		<= 1'b0;
 			ReadDhtTable		<= 2'd0;
-			HmShift			<= 16'd0;
+			HmShift			    <= 16'd0;
 			HmData				<= 16'd0;
 			HmMax				<= 8'd0;
-			HmCount			<= 8'd0;
+			HmCount			    <= 8'd0;
 			HmEnable			<= 1'b0;
-			JpegBlockWidth	<= 16'd0;
-			JpegBlockHeight	<= 16'd0;
+			JpegBlockWidth	    <= 16'd0;
+			JpegBlockHeight	    <= 16'd0;
 			JpegComp			<= 3'd0;
-			JpegProgressive   <= 1'b0;
+			JpegProgressive     <= 1'b0;
 			ComponentNum        <= 2'd0;
-			SubSamplingW      <= 2'd0;
-			SubSamplingH      <= 2'd0;
-			ImageEnable		<= 1'b0;
+			SubSamplingW        <= 2'd0;
+			SubSamplingH        <= 2'd0;
+			ImageEnable		    <= 1'b0;
 			FetchImageEnable	<= 1'b0;
+			JpegRestart         <= 16'd0;
+			LastDataEnable      <= 1'b0;
 		end else begin
 			case(State)
 				S_Idle: begin
-					if(DataInEnable == 1'b1) begin
+				    LastDataEnable <= DataInEnable;
+					if(DataInEnable && LastDataEnable) begin
 						State	<= S_GetMarker;
 					end
 				end
@@ -201,9 +210,9 @@ module aq_djpeg_fsm(
 							16'hFFDA: begin		// SOS Segment
 								State <= S_SOSLength;
 							end
-							//16'hFFDD: begin		// DRI Segment
-							//		State <= S_DRI;
-							//end
+							16'hFFDD: begin		// DRI Segment
+								State <= S_DRILength;
+							end
 							//16'hFFDx: begin		// RSTn Segment
 							//		State <= S_RST;
 							//end
@@ -283,7 +292,7 @@ module aq_djpeg_fsm(
 						endcase
 						TableReadCount <= TableReadCount - 1'd1;
 					end
-					HmShift		<= 16'h8000;
+					HmShift		    <= 16'h8000;
 					HmData			<= 16'h0000;
 					HmMax			<= 8'h00;
 					ReadCount		<= 16'd0;
@@ -452,21 +461,36 @@ module aq_djpeg_fsm(
 					JpegBlockWidth	<= JpegBlockWidth	>> ((SubSamplingW == 2'd2) ? 4 : 3);
 					JpegBlockHeight	<= JpegBlockHeight  >> ((SubSamplingH == 2'd2) ? 4 : 3);
 				end
-	
+                
+                // DRI Segment
+                S_DRILength: begin
+					if(DataInEnable == 1'b1) begin
+						State		<= S_DRIRead;
+					end
+				end
+				S_DRIRead: begin
+					if(DataInEnable == 1'b1) begin
+						State		<= S_GetMarker;
+						JpegRestart	<= DataIn[31:16];
+					end
+	            end
 				// Image Process
 				S_ImageData: begin
 					if(OutEnable & OutReady & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
-						if (DataInEnd)
-							State           <= S_Idle;
-						else
-							State			<= S_WaitEOI;
 						ImageEnable	<= 1'b0;
+						if (DataInEnd) begin
+							State           <= S_Idle;
+							LastDataEnable  <= 1'b0;
+						    FetchImageEnable <= 1'b0;
+						end else
+							State			<= S_WaitEOI;
 					end
 				end
 
 				S_WaitEOI: begin
 					if(DataInEnd) begin
 						State           <= S_Idle;
+					    LastDataEnable  <= 1'b0;
 						FetchImageEnable <= 1'b0;
 					end
 				end
@@ -487,7 +511,8 @@ module aq_djpeg_fsm(
 												(State == S_DQTLength) |
 												(State == S_DHTLength) |
 												(State == S_SOSLength) | (State == S_SOSRead1) |
-												(State == S_SOFLength) | (State == S_SOFReadX) | (State == S_SOFReadY)
+												(State == S_SOFLength) | (State == S_SOFReadX) | (State == S_SOFReadY) |
+												(State == S_DRILength) | (State == S_DRIRead)
 												);
 
 	assign JpegDecodeIdle	= (State == S_Idle);

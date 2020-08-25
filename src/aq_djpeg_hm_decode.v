@@ -37,6 +37,7 @@ module aq_djpeg_hm_decode(
 	input           JpegProgressive,
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
+	input           ResetDC,
 
 	// DHT table
 	output [1:0]	DhtColor,				// Color Number
@@ -373,6 +374,11 @@ module aq_djpeg_hm_decode(
 					end else if(DataInEnable == 1'b1 & DataOutIdle == 1'b1) begin
 						Process		<= Phase2;
 						ProcessData	<= DataIn;
+					end
+					if (ResetDC) begin
+                        PreData[0]		<= 32'h00000000;
+                        PreData[1]		<= 32'h00000000;
+                        PreData[2]		<= 32'h00000000;
 					end
 					OutEnable	<= 1'b0;
 //					DataOutEnable	<= 1'b0;

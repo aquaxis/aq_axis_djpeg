@@ -73,6 +73,10 @@ module tb_aq_axis_djpeg;
 
   parameter TIME10N = 10;
 
+  parameter FILESOURCE = "D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\id_1.mem";
+  parameter FILETARGET = "D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\id_1.dat";
+  parameter TREADYINTERVAL = 0;
+
   always begin
     #(TIME10N/2) CLK = ~CLK;
   end
@@ -99,7 +103,8 @@ module tb_aq_axis_djpeg;
 	parameter clkL = clkP - clkH;
 
 	integer	 count;
-	reg [23:0]	rgb_mem [0:1920*1080-1];
+	reg [23:0]	 rgb_mem [0:1920*1080-1];
+	reg         hold_image;
 
 	initial begin
 		count = 0;
@@ -203,7 +208,7 @@ module tb_aq_axis_djpeg;
 
 	// Read JPEG File
 	initial begin
-		$readmemh("D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\sample3.mem",JPEG_MEM);
+		$readmemh(FILESOURCE, JPEG_MEM);
 	end
 
 	// Initial
@@ -214,10 +219,12 @@ module tb_aq_axis_djpeg;
 	    u_task_axilm.write(32'h0000_0000, 32'h8000_0000);
 	    u_task_axilm.write(32'h0000_0000, 32'h0000_0000);
 
+        hold_image = 0;
+
 		@(posedge CLK);
 		@(posedge CLK);
 		forever begin
-		 if(S_AXIS_TREADY == 1'b1) begin
+		 if((!hold_image) && S_AXIS_TREADY == 1'b1) begin
 		 	S_AXIS_TVALID <= 1'b1;
 		 end else begin
 		 	S_AXIS_TVALID <= 1'b0;
@@ -226,12 +233,24 @@ module tb_aq_axis_djpeg;
 		end
 	end
 
+    initial begin
+        wait (RST_N);
+        forever begin
+            @(posedge CLK);
+            M_AXIS_TREADY <= 1'b1;
+            repeat (TREADYINTERVAL) @(posedge CLK)  M_AXIS_TREADY <= 1'b0;
+        end
+    end
+
 	initial begin
 		# 0;
 		DATA_COUNT	<= 0;
 		forever begin
 			if(S_AXIS_TREADY & S_AXIS_TVALID) begin
 				DATA_COUNT	<= DATA_COUNT +1;
+			end
+			if(u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_regdata.DataEnd) begin
+			    DATA_COUNT  <= 0;
 			end
 			 @(posedge CLK);
 		end
@@ -350,7 +369,7 @@ module tb_aq_axis_djpeg;
 		ConvertEnable <= 0;
 		while(1) begin
 		 @(posedge CLK);
-		 if((u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.ConvertRead == 1'b1 == 1'b1) && (u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.ConvertAddress == 8'd255)) begin
+		 if((u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.ConvertRead == 1'b1 == 1'b1) && (u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.ConvertAddressY == 8'd255)) begin
 			ConvertEnable <= ConvertEnable + 1;
 			$display(" ConvertEnable: %d", ConvertEnable);
 		end
@@ -497,7 +516,7 @@ module tb_aq_axis_djpeg;
 	// ??????????????????????????????
 	initial begin
 		while(1) begin
-		 if(u_axis_aq_djpeg.u_aq_djpeg.OutEnable == 1'b1) begin
+		 if(M_AXIS_TREADY && M_AXIS_TVALID && u_axis_aq_djpeg.u_aq_djpeg.OutEnable == 1'b1) begin
 			address = u_axis_aq_djpeg.u_aq_djpeg.OutWidth * u_axis_aq_djpeg.u_aq_djpeg.OutPixelY + u_axis_aq_djpeg.u_aq_djpeg.OutPixelX;
 			$display(" RGB[%4d,%4d][%4d,%4d]: %2x,%2x,%2x",
 			u_axis_aq_djpeg.u_aq_djpeg.OutPixelX,
@@ -512,11 +531,45 @@ module tb_aq_axis_djpeg;
 		 @(posedge CLK);
 		end
 	end
-
+    
+    reg llast;
+    
+    reg [31:0] writeCount;
+    reg [31:0] readCount;
+    
+    always @(posedge u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.u_jpeg_ycbcr_mem.WriteNext)
+        writeCount = writeCount + 1;
+    
+    always @(posedge u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.u_jpeg_ycbcr_mem.ReadNext)
+        readCount = readCount + 1;
+    
+    initial begin
+        while(1) begin
+            llast = 0;
+            writeCount = 0;
+            readCount = 0;
+            @(posedge CLK);
+            while(!llast) begin 
+                @(posedge CLK);
+                if (M_AXIS_TLAST) llast = 1;
+                if (u_axis_aq_djpeg.u_aq_djpeg.u_jpeg_ycbcr.u_jpeg_ycbcr_mem.DataInEnable
+                && (writeCount == readCount + 5)
+                ) begin
+                    $display("Error: Reordering queue overflow");
+                    $stop();
+                end
+            end
+        end
+    end
 
 	initial begin
-		wait(M_AXIS_TLAST);
+		forever begin 
+		@(posedge M_AXIS_TLAST)
 
+		hold_image = 1;
+		repeat(100) @(posedge CLK);
+		hold_image = 0;
+		
 		@(posedge CLK);
 		@(posedge CLK);
 		@(posedge CLK);
@@ -527,7 +580,7 @@ module tb_aq_axis_djpeg;
 		@(posedge CLK);
 
 		$display(" End Clock %d",count);
-		fp = $fopen("D:\\verilog_wb\\aquaxis_ipcores\\aq_axis_djpeg\\model\\sample3.dat");
+		fp = $fopen(FILETARGET);
 		$fwrite(fp,"%0d\n",u_axis_aq_djpeg.u_aq_djpeg.OutWidth);
 		$fwrite(fp,"%0d\n",u_axis_aq_djpeg.u_aq_djpeg.OutHeight);
 
@@ -537,8 +590,11 @@ module tb_aq_axis_djpeg;
 		$fclose(fp);
 
 //		$coverage_save("sim.cov");
-		$finish();
-		//$stop();
+		//$finish();
+		//
+		
+		$stop();
+		end
 	end
 
 endmodule

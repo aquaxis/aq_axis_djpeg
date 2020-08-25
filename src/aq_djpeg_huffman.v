@@ -54,10 +54,12 @@ module aq_djpeg_huffman(
 	input [11:0]    JpegBlockHeight,
 	input [1:0]     SubSamplingW,
 	input [1:0]     SubSamplingH,
+	input [15:0]    JpegRestart,
     
 	output          DecodeNextBlock,
 	output			DecodeUseBit,
 	output [6:0]	DecodeUseWidth,
+	output          DecodeAlignByte,
 
 	// Data Out
 	output			DataOutEnable,
@@ -143,9 +145,42 @@ module aq_djpeg_huffman(
 			end
 		end
 	end
+	
+	reg  [15:0]     HmDecodeCount;
+	reg             HmDecodePreAlignByte;
+	reg             HmDecodeAlignByte;
+	
+	always @(posedge clk or negedge rst) begin
+		if(!rst) begin
+			HmDecodeCount <= 16'd0;
+			HmDecodePreAlignByte <= 1'b0;
+			HmDecodeAlignByte <= 1'b0;
+		end else begin
+			if(ProcessInit) begin
+				HmDecodeCount <= 16'd0;
+			    HmDecodePreAlignByte <= 1'b0;
+			    HmDecodeAlignByte <= 1'b0;
+			end else if(HmDecodeNextBlock) begin
+			    if (JpegRestart == HmDecodeCount + 1 && JpegRestart != 0) begin
+			        HmDecodeCount <= 16'd0;
+			        HmDecodePreAlignByte <= 1'b1;
+			    end else begin
+			        HmDecodeCount <= HmDecodeCount + 1;
+			    end
+			end
+			
+			if (HmDecodeAlignByte) begin
+			    HmDecodeAlignByte <= 1'b0;
+			end else if (DataInEnable) begin
+			    HmDecodeAlignByte <= HmDecodePreAlignByte;
+			    HmDecodePreAlignByte <= 1'b0;
+			end
+		end
+	end
 
 	assign DecodeNextBlock = HmDecodeNextBlock;
-	assign HmInEnable = DataInEnable & (~HmDecodeFinish);
+	assign HmInEnable = DataInEnable & (~HmDecodeFinish) & (~HmDecodePreAlignByte) & (~HmDecodeAlignByte);
+	assign DecodeAlignByte = HmDecodeAlignByte;
 
 	aq_djpeg_hm_decode u_jpeg_hm_decode(
 		.rst				( rst					),
@@ -166,6 +201,7 @@ module aq_djpeg_huffman(
 		.JpegProgressive    ( JpegProgressive       ),
 		.SubSamplingW       ( SubSamplingW          ),
 		.SubSamplingH       ( SubSamplingH          ),
+		.ResetDC            ( HmDecodePreAlignByte  ),
 
 		// Huffman Table List
 		.DhtColor			( HmDhtColor			),
