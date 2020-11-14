@@ -323,7 +323,7 @@ module aq_djpeg_regdata(
 				PreEnable	<= 1'b0;
 				DataOut	<= 32'h00000000;
 			end else begin
-				OutEnable	<= RegValid;
+				OutEnable	<= RegValid & !PreImageEnable; // Avoid image data output before the first shift into higher bits
 				PreEnable	<= (UseBit == 1'b1 | UseByte == 1'b1 | UseWord == 1'b1 | AlignByte == 1'b1);
 				DataOut	<= SliceData(RegData,RegWidth);
 			end

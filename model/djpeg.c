@@ -569,9 +569,11 @@ void HuffmanDecode(unsigned char *buff, unsigned char table, int *BlockData){
 	if(count ==0){
 		// DC成分の場合、データとなる
 		if(DataCount ==0) DataCode =0x0; // DataCountが0ならデータは0である
+		log_printf(" Data out %08x + %08x -> %08x\n", DataCode, PreData[table], PreData[table] + DataCode);
 		PreData[table] += DataCode; // DC成分は加算しなければならない
 		// 逆量子化＋ジグザグ
 		BlockData[zigzag_table[count]] =PreData[table]*TableDQT[tabledqt][count];
+		log_printf(" Data dqt %08x * %08x -> %08x\n", PreData[table], TableDQT[tabledqt][count], BlockData[zigzag_table[count]]);
 		count ++;
 	}else{
 		if(ZeroCount == 0x0 && DataCount == 0x0){
