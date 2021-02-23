@@ -17,8 +17,8 @@ sim:
 	make raw_hex2bmp
 	mkdir -p simulation
 	$(SETTING); cd simulation; xvlog --incr --relax -prj ../scripts/simulation.prj 2>&1 | tee compile.log
-	$(SETTING); cd simulation; xelab --incr --debug typical --relax --mt 8 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_aq_axis_djpeg_behav xil_defaultlib.tb_aq_axis_djpeg xil_defaultlib.glbl -log elaborate.log
-	$(SETTING); cd simulation; xsim tb_aq_axis_djpeg_behav -key {Behavioral:sim_1:Functional:tb_aq_axis_djpeg} -tclbatch ../scripts/simulation.tcl -log simulate.log
+	$(SETTING); cd simulation; xelab --incr --debug typical --relax --mt 8 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_aq_axis_djpeg xil_defaultlib.tb_aq_axis_djpeg xil_defaultlib.glbl -log elaborate.log
+	$(SETTING); cd simulation; xsim tb_aq_axis_djpeg -tclbatch ../scripts/simulation.tcl -log simulate.log
 	cd simulation; ../model/raw_hex2bmp sim.dat output.bmp
 
 clean:
