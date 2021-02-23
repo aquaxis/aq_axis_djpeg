@@ -1,14 +1,15 @@
 /*
-* Copyright (C)2005-2014 H.Ishihara
-*
-* License: The Open Software License 3.0
-* License URI: http://www.opensource.org/licenses/OSL-3.0
-*
-* For further information please contact.
-*	http://www.aquaxis.com/
-*	info(at)aquaxis.com or hidemi(at)sweetcafe.jp
-*/
-//////////////////////////////////////////////////////////////////////////////
+ * Don't remove this header.
+ * Copyright (C)2021-     AQUAXIS TECHNOLOGY.
+ * Copyright (C)2005-2014 H.Ishihara
+ *
+ * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
+ *
+ * For further information please contact.
+ *   WebPage: http://www.aquaxis.com/
+ *   E-Mail:  hidemi(at)aquaxis.com
+ */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -30,9 +31,6 @@ typedef struct tagBITMAPINFOHEADER{
   DWORD  biClrImportant;
 } BITMAPINFOHEADER, *PBITMAPINFOHEADER;
 
-//////////////////////////////////////////////////////////////////////////////
-// メイン関数
-//////////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[])
 {
   unsigned char buff[4];
@@ -66,7 +64,7 @@ int main(int argc, char *argv[])
 
   image = (unsigned char *)malloc(height*width*3);
 
-  // ファイルヘッダの設定
+  // Bitmap Header
   tbuff[0] = 'B';
   tbuff[1] = 'M';
   fwrite(tbuff,2,1,wfp);
@@ -85,7 +83,7 @@ int main(int argc, char *argv[])
   tbuff[0] = 54;
   fwrite(tbuff,4,1,wfp);
 
-  // インフォメーションの設定
+  // Bitmap Info
   lpBi.biSize            = 40;
   lpBi.biWidth           = width;
   lpBi.biHeight          = height;

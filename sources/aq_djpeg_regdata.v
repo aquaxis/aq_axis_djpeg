@@ -1,23 +1,18 @@
 /*
+ * Don't remove this header. 
+ *
+ * Decode JPEG
+ *
  * Copyright (C)2006-2015 AQUAXIS TECHNOLOGY.
- *  Don't remove this header.
  * When you use this source, there is a need to inherit this header.
  *
- * License
- *  For no commercial -
- *   License:     The Open Software License 3.0
- *   License URI: http://www.opensource.org/licenses/OSL-3.0
- *
- *  For commmercial -
- *   License:     AQUAXIS License 1.0
- *   License URI: http://www.aquaxis.com/licenses
+ * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
  *
  * For further information please contact.
  *	URI:    http://www.aquaxis.com/
- *	E-Mail: info(at)aquaxis.com
+ *	E-Mail: hidemi(at)aquaxis.com
  */
-`timescale 1ps / 1ps
-
 module aq_djpeg_regdata(
 	input			rst,
 	input			clk,

@@ -1,15 +1,17 @@
 /*
+ * Don't remove this header.
+ * 
  * AXI4 Lite Slave
  *
- * Copyright (C)2014-2019 AQUAXIS TECHNOLOGY.
- *  Don't remove this header.
+ * Copyright (C)2014-     AQUAXIS TECHNOLOGY.
  * When you use this source, there is a need to inherit this header.
  *
  * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
  *
  * For further information please contact.
  *	URI:    http://www.aquaxis.com/
- *	E-Mail: info(at)aquaxis.com
+ *	E-Mail: hidemi(at)aquaxis.com
  */
 module aq_axis_djpeg_ctrl
 (

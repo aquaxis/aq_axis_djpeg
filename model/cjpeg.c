@@ -1,13 +1,15 @@
 /*
-* Copyright (C)2005-2014 H.Ishihara
-*
-* License: The Open Software License 3.0
-* License URI: http://www.opensource.org/licenses/OSL-3.0
-*
-* For further information please contact.
-*	http://www.aquaxis.com/
-*	info(at)aquaxis.com or hidemi(at)sweetcafe.jp
-*/
+ * Don't remove this header.
+ * Copyright (C)2021-     AQUAXIS TECHNOLOGY.
+ * Copyright (C)2005-2014 H.Ishihara
+ *
+ * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
+ *
+ * For further information please contact.
+ *   WebPage: http://www.aquaxis.com/
+ *   E-Mail:  hidemi(at)aquaxis.com
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -215,8 +217,7 @@ static unsigned char std_ac_chrominance_values[162]={
   0xf9, 0xfa };
 
 static unsigned char bytenew=0; // The byte that will be written in the JPG file
-static signed char bytepos=7; //bit position in the byte we write (bytenew)
-			//should be<=7 and >=0
+static signed char bytepos=7;   //bit position in the byte we write (bytenew) should be<=7 and >=0
 static unsigned short int mask[16]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
 
 // The Huffman tables we'll use:
@@ -359,10 +360,10 @@ void writebits(bitstring bs){
     posval--;bytepos--;
     if(bytepos<0) {
       if(bytenew==0xFF) {
-	writebyte(0xFF);
-	writebyte(0);
+  writebyte(0xFF);
+  writebyte(0);
       }else{
-	writebyte(bytenew);
+  writebyte(bytenew);
       }
       bytepos=7;
       bytenew=0;
@@ -422,7 +423,7 @@ void set_numbers_category_and_bitcode(){
 
 void DCT(signed char *data,unsigned char *fdtbl,signed short int *outdata){
   double aanscalefactor[8] = {1.0, 1.387039845, 1.306562965, 1.175875602,
-			      1.0, 0.785694958, 0.541196100, 0.275899379};
+            1.0, 0.785694958, 0.541196100, 0.275899379};
   float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   float tmp10, tmp11, tmp12, tmp13, tmp14, tmp15, tmp16, tmp17, tmp18, tmp19;
   float z1, z2, z3, z4, z5, z11, z13;
@@ -530,8 +531,8 @@ void DCT(signed char *data,unsigned char *fdtbl,signed short int *outdata){
 }
 
 void process_DU(signed char *ComponentDU,unsigned char *fdtbl,
-		signed short int *DC,
-		bitstring *HTDC,bitstring *HTAC){
+    signed short int *DC,
+    bitstring *HTDC,bitstring *HTAC){
   unsigned char i;
   unsigned char startpos;
   unsigned char end0pos;
@@ -540,21 +541,21 @@ void process_DU(signed char *ComponentDU,unsigned char *fdtbl,
   signed short int Diff;
   
   DCT(ComponentDU,fdtbl,DU_DCT);
-  // ¥¸¥°¥¶¥°
+  // ã‚¸ã‚°ã‚¶ã‚°
   for (i=0;i<=63;i++) DU[zigzag[i]]=DU_DCT[i];
   Diff=DU[0]-*DC;
   *DC=DU[0];
-  // DCÀ®Ê¬¤Î¥¨¥ó¥³¡¼¥É
+  // DCæˆåˆ†ã®ã‚¨ãƒ³ã‚³ãƒ¼ãƒ‰
   if (Diff==0) writebits(HTDC[0]); //Diff might be 0
   else {
     writebits(HTDC[category[Diff]]);
     writebits(bitcode[Diff]);
   }
-  // ACÀ®Ê¬¤Î¥¨¥ó¥³¡¼¥É
-  // 0¤Î¿ô¤òµÕ¤«¤é¿ô¤¨¤ë
+  // ACæˆåˆ†ã®ã‚¨ãƒ³ã‚³ãƒ¼ãƒ‰
+  // 0ã®æ•°ã‚’é€†ã‹ã‚‰æ•°ãˆã‚‹
   for (end0pos=63;(end0pos>0)&&(DU[end0pos]==0);end0pos--) ;
   if (end0pos==0) {
-    // Á´¤Æ0¤Ê¤éEOB(¥¨¥ó¥É¥ª¥Ö¥Ö¥í¥Ã¥¯)¤ò½ñ¤­¹ş¤à
+    // å…¨ã¦0ãªã‚‰EOB(ã‚¨ãƒ³ãƒ‰ã‚ªãƒ–ãƒ–ãƒ­ãƒƒã‚¯)ã‚’æ›¸ãè¾¼ã‚€
     writebits(HTAC[0x00]);
     return;
   }
@@ -565,7 +566,7 @@ void process_DU(signed char *ComponentDU,unsigned char *fdtbl,
     for (; (DU[i]==0)&&(i<=end0pos);i++) ;
     nrzeroes=i-startpos;
     if (nrzeroes>=16) {
-      // 0¤¬16¸Ä°Ê¾åÂ³¤¤¤¿¤é0¤¬16¸Ä¥³¡¼¥É¤ò½ĞÎÏ¤¹¤ë
+      // 0ãŒ16å€‹ä»¥ä¸Šç¶šã„ãŸã‚‰0ãŒ16å€‹ã‚³ãƒ¼ãƒ‰ã‚’å‡ºåŠ›ã™ã‚‹
       for (nrmarker=1;nrmarker<=nrzeroes/16;nrmarker++) writebits(HTAC[0xF0]);
       nrzeroes=nrzeroes%16;
     }
@@ -573,7 +574,7 @@ void process_DU(signed char *ComponentDU,unsigned char *fdtbl,
     writebits(bitcode[DU[i]]);
     i++;
   }
-  if (end0pos!=63) writebits(HTAC[0x00]); // »Ä¤ê¤¬£°¤Ê¤éEOB
+  if (end0pos!=63) writebits(HTAC[0x00]); // æ®‹ã‚ŠãŒ0ãªã‚‰EOB
 }
 
 void RGB2YCbCr(unsigned short int xpos,unsigned short int ypos){
@@ -586,8 +587,8 @@ void RGB2YCbCr(unsigned short int xpos,unsigned short int ypos){
       B=buffer[ypos*Ximage*3+xpos*3+y*Ximage*3+x*3+0];
       DU_Y[y*16+x]  = (unsigned char)(0.299 *R + 0.587 *G + 0.114 *B) -128;
       if(x%2==0 & y%2==0){
-	DU_Cb[y/2*8+x/2] = (unsigned char)(0.5 *B - 0.33126 *G - 0.16874 *R);
-	DU_Cr[y/2*8+x/2] = (unsigned char)(0.5 *R - 0.41869 *G - 0.08131 *B);
+        DU_Cb[y/2*8+x/2] = (unsigned char)(0.5 *B - 0.33126 *G - 0.16874 *R);
+        DU_Cr[y/2*8+x/2] = (unsigned char)(0.5 *R - 0.41869 *G - 0.08131 *B);
       }
     }
   }

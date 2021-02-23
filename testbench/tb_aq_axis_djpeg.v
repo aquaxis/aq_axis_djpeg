@@ -1,22 +1,22 @@
 /*
+ * Don't remove this header. 
+ *
+ * Decode JPEG
+ *
  * Copyright (C)2006-2015 AQUAXIS TECHNOLOGY.
- *  Don't remove this header.
  * When you use this source, there is a need to inherit this header.
  *
- * License
- *  For no commercial -
- *   License:     The Open Software License 3.0
- *   License URI: http://www.opensource.org/licenses/OSL-3.0
- *
- *  For commmercial -
- *   License:     AQUAXIS License 1.0
- *   License URI: http://www.aquaxis.com/licenses
+ * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
  *
  * For further information please contact.
  *	URI:    http://www.aquaxis.com/
- *	E-Mail: info(at)aquaxis.com
+ *	E-Mail: hidemi(at)aquaxis.com
  */
-`timescale 1ps / 1ps
+`timescale 1ns / 1ps
+
+// from aq_axis_djpeg/aq_axis_djpeg.sim/sim_1/behav/
+`define FILENAME "../../../../../model/sample.hex"
 
 module tb_aq_axis_djpeg;
   // Reset&Clock
@@ -205,7 +205,7 @@ module tb_aq_axis_djpeg;
 
 	// Read JPEG File
 	initial begin
-		$readmemh("/home/hidemi/workspace/IPCORE/aq_axis_djpeg/src/test.mem",JPEG_MEM);
+		$readmemh(`FILENAME, JPEG_MEM);
 	end
 
 	// Initial

@@ -1,4 +1,19 @@
 /*
+ * Don't remove this header. 
+ *
+ * Decode JPEG
+ *
+ * Copyright (C)2006-2015 AQUAXIS TECHNOLOGY.
+ * When you use this source, there is a need to inherit this header.
+ *
+ * License: MIT License
+ * License URI: http://github.com/aquaxis/aq_axis_djpeg/LICENSE
+ *
+ * For further information please contact.
+ *	URI:    http://www.aquaxis.com/
+ *	E-Mail: hidemi(at)aquaxis.com
+ */
+/*
  * Copyright (C)2006-2015 AQUAXIS TECHNOLOGY.
  *  Don't remove this header. 
  * When you use this source, there is a need to inherit this header.
