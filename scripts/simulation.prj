@@ -1,0 +1,26 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  \
+"../sources/aq_axis_djpeg.v" \
+"../sources/aq_axis_djpeg_ctrl.v" \
+"../sources/aq_djpeg.v" \
+"../sources/aq_djpeg_dht.v" \
+"../sources/aq_djpeg_dqt.v" \
+"../sources/aq_djpeg_fsm.v" \
+"../sources/aq_djpeg_hm_decode.v" \
+"../sources/aq_djpeg_huffman.v" \
+"../sources/aq_djpeg_idct.v" \
+"../sources/aq_djpeg_idct_calc.v" \
+"../sources/aq_djpeg_idctb.v" \
+"../sources/aq_djpeg_regdata.v" \
+"../sources/aq_djpeg_ycbcr.v" \
+"../sources/aq_djpeg_ycbcr2rgb.v" \
+"../sources/aq_djpeg_ycbcr_mem.v" \
+"../sources/aq_djpeg_ziguzagu.v" \
+"../testbench/task_axilm.v" \
+"../testbench/tb_aq_axis_djpeg.v" \
+
+# compile glbl module
+verilog xil_defaultlib "${XILINX_VIVADO}/data/verilog/src/glbl.v"
+
+# Do not sort compile order
+nosort

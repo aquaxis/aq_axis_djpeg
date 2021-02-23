@@ -16,7 +16,7 @@
 `timescale 1ns / 1ps
 
 // from aq_axis_djpeg/aq_axis_djpeg.sim/sim_1/behav/
-`define FILENAME "../../../../../model/sample.hex"
+`define FILENAME "../model/sample.hex"
 
 module tb_aq_axis_djpeg;
   // Reset&Clock
