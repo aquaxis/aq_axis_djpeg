@@ -121,7 +121,7 @@ module aq_djpeg_fsm(
 
 	reg				ImageEnable;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			State				<= S_Idle;
 			ReadCount			<= 16'd0;

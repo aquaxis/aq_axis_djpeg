@@ -39,7 +39,7 @@ module aq_djpeg_idct_calc(
     reg [2:0]     Phase1PageD;
     reg [2:0]     Phase1CountD;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase1Enable  <= 1'b0;
             Phase1Page    <= 3'd0;
@@ -188,7 +188,7 @@ module aq_djpeg_idct_calc(
     reg signed [31:0] Phase1R2r;
     reg signed [31:0] Phase1R3r;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase1R0r <= 0;
             Phase1R1r <= 0;
@@ -226,7 +226,7 @@ module aq_djpeg_idct_calc(
     reg [2:0]       Phase2PageD;
     reg [2:0]       Phase2CountD;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase2Enable  <= 1'b0;
             Phase2Page    <= 3'd0;
@@ -252,7 +252,7 @@ module aq_djpeg_idct_calc(
 
     reg signed [31:0]  Phase2Reg [0:7];
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase2Reg[0] <= 0;
             Phase2Reg[1] <= 0;
@@ -296,7 +296,7 @@ module aq_djpeg_idct_calc(
     reg [2:0]     Phase3PageD;
     reg [2:0]     Phase3CountD;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase3Enable  <= 1'b0;
             Phase3Page    <= 3'd0;
@@ -337,7 +337,7 @@ module aq_djpeg_idct_calc(
 
     reg signed [31:0]  Phase3Reg [0:7];
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase3Reg[0] <= 0;
             Phase3Reg[1] <= 0;
@@ -381,7 +381,7 @@ module aq_djpeg_idct_calc(
     reg [2:0]     Phase4PageD;
     reg [2:0]     Phase4CountD;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase4Enable  <= 1'b0;
             Phase4Page    <= 3'd0;
@@ -411,7 +411,7 @@ module aq_djpeg_idct_calc(
     assign Phase4R0w = Phase3Reg[6] + Phase3Reg[5];
     assign Phase4R1w = Phase3Reg[6] - Phase3Reg[5];
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase4R0r <= 0;
             Phase4R1r <= 0;
@@ -439,7 +439,7 @@ module aq_djpeg_idct_calc(
     reg [2:0]     Phase5PageD;
     reg [2:0]     Phase5CountD;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase5Enable  <= 1'b0;
             Phase5Page    <= 3'd0;
@@ -473,7 +473,7 @@ module aq_djpeg_idct_calc(
     reg signed [31:0]  Phase5R0r;
     reg signed [31:0]  Phase5R1r;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             Phase5R0r <= 0;
             Phase5R1r <= 0;

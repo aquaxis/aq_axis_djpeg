@@ -56,7 +56,7 @@ module aq_djpeg_ycbcr_mem(
 	assign ReadNext = (DataOutRead && (DataOutAddress == 8'd255))?1'b1:1'b0;
 
 	// Bank
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			WriteBank	<= 2'd0;
 			ReadBank	<= 2'd0;
@@ -79,7 +79,7 @@ module aq_djpeg_ycbcr_mem(
 	localparam S_IDLE = 2'd0;
 	localparam S_FULL = 2'd1;
 	
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			state <= S_IDLE;
 		end else begin

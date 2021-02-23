@@ -38,7 +38,7 @@ module aq_djpeg_idctb(
     assign DataInAddress = {DataInPage, DataInCount};
 
     // Bank
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             WriteBank <= 2'd0;
             ReadBank <= 2'd0;

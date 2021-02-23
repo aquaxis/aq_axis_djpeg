@@ -106,7 +106,7 @@ module aq_axis_djpeg_ctrl
   wire [3:0]    local_be;
   wire [31:0]   local_addr, local_wdata, local_rdata;
 
-  always @( posedge ACLK or negedge ARESETN ) begin
+  always @( posedge ACLK    ) begin
     if( !ARESETN ) begin
       state         <= S_IDLE;
       reg_rnw       <= 1'b0;
@@ -194,7 +194,7 @@ module aq_axis_djpeg_ctrl
   reg         reg_rst;
 
   // Write Register
-  always @(posedge ACLK or negedge ARESETN) begin
+  always @(posedge ACLK   ) begin
     if(!ARESETN) begin
       reg_rst <= 1'b0;
     end else begin
@@ -215,7 +215,7 @@ module aq_axis_djpeg_ctrl
   end
 
   // Read Register
-  always @(posedge ACLK or negedge ARESETN) begin
+  always @(posedge ACLK   ) begin
     if(!ARESETN) begin
       reg_rdata[31:0] <= 32'd0;
       rd_ack <= 1'b0;

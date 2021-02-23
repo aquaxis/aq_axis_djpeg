@@ -50,7 +50,7 @@ module aq_djpeg_ycbcr(
 	wire [11:0]		ConvertBlockX;
 	wire [11:0]		ConvertBlockY;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			DataInColor	<= 3'd0;
 		end else begin
@@ -98,7 +98,7 @@ module aq_djpeg_ycbcr(
 	//------------------------------------------------------------------------
 	// YCbCr to RGB
 	//------------------------------------------------------------------------
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			DataInBlockX <= 12'd0;
 			DataInBlockY <= 12'd0;

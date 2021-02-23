@@ -49,7 +49,7 @@ module aq_djpeg_ziguzagu(
     wire [5:0]  WriteQuery;
 
     // State Machine
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             State <= S_IDLE;
             BankCount <= 2'd0;
@@ -94,7 +94,7 @@ module aq_djpeg_ziguzagu(
     end
 
     // Color
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             BankColor[0]    <= 3'd0;
             BankColor[1]    <= 3'd0;
@@ -106,7 +106,7 @@ module aq_djpeg_ziguzagu(
     end
 
     // Bank
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             WriteBank   <= 2'd0;
             ReadBank    <= 2'd0;
@@ -227,7 +227,7 @@ module aq_djpeg_ziguzagu(
     // Data Enable Register
     reg [127:0] DataEnableA, DataEnableB;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             DataEnableA <= 128'd0;
             DataEnableB <= 128'd0;
@@ -294,7 +294,7 @@ module aq_djpeg_ziguzagu(
 
     reg AddressDelayA, AddressDelayB;
 
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk ) begin
         if(!rst) begin
             AddressDelayA <= 1'b0;
             AddressDelayB <= 1'b0;

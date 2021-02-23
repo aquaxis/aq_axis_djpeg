@@ -43,7 +43,7 @@ module aq_djpeg_ycbcr2rgb(
 	reg [11:0]	 	RunBlockY;
 	reg [2:0]		RunComp;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			RunActive	<= 1'b0;
 			RunCount	<= 8'h00;
@@ -122,7 +122,7 @@ module aq_djpeg_ycbcr2rgb(
 	reg signed [8:0]	Phase1Y,Phase1Cb,Phase1Cr;
 	reg signed [8:0]	Phase2Y,Phase2Cb,Phase2Cr;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			rgb00r <= 0;
 			r00r	<= 0;

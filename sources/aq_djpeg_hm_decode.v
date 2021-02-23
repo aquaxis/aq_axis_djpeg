@@ -88,7 +88,7 @@ module aq_djpeg_hm_decode(
 	reg [7:0]		HuffmanNumber2r [0:15];	// C-DC Huffman Number
 	reg [7:0]		HuffmanNumber3r [0:15];	// C-AC Huffman Number
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			HuffmanTable0r[0]		<= 16'h0000;
 			HuffmanNumber0r[0]	<=	8'h00;
@@ -347,7 +347,7 @@ module aq_djpeg_hm_decode(
 	endfunction
 	assign SubCode = SubCodeSel(DhtWidth);
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			Process			<= ProcIdle;
 			ProcessData		<= 32'h00000000;

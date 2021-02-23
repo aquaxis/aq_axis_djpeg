@@ -52,7 +52,7 @@ module aq_djpeg_regdata(
 
 	assign PreImageEnable	= ((ImageEnable == 1'b1) && (ImageReady == 1'b0))?1'b1:1'b0;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			RegData	<= 96'd0;
 			RegWidth	<= 7'd0;
@@ -156,7 +156,7 @@ module aq_djpeg_regdata(
 	end
 
 	// PickUp with End of Jpeg Data
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			DataEnd <= 1'b0;
 		end else begin
@@ -245,7 +245,7 @@ module aq_djpeg_regdata(
 	reg				PreEnable;
 	reg [31:0]		DataOut;
 
-	always @(posedge clk or negedge rst) begin
+	always @(posedge clk ) begin
 		if(!rst) begin
 			OutEnable	<= 1'b0;
 			PreEnable	<= 1'b0;
