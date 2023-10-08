@@ -23,8 +23,10 @@ module aq_djpeg(
 	output			DataInRead,
 	output 			DataInReq,
 
-	output			JpegDecodeIdle,	// Deocdeer Process Idle(1:Idle, 0:Run)
+	output			JpegDecodeIdle,	// Decoder Process Idle(1:Idle, 0:Run)
+	output          JpegProgressive,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutWidth,
 	output [15:0]	OutHeight,
@@ -37,12 +39,15 @@ module aq_djpeg(
 	wire [31:0]		JpegData;
 	wire			JpegDataEnable;
 	wire			JpegDecodeIdle;
+	wire            JpegDataEnd;
 
 	wire			UseBit;
 	wire [6:0]		UseWidth;
 	wire			UseByte;
 	wire			UseWord;
+	wire           AlignByte;
 
+	wire			FetchImageEnable;
 	wire			ImageEnable;
 	wire			EnableFF00;
 	wire			DataInFull;
@@ -69,16 +74,18 @@ module aq_djpeg(
 		// DataOut
 		.DataOut			( JpegData			),
 		.DataOutEnable	( JpegDataEnableW	),
+		.DataOutEnd         ( JpegDataEnd       ),
 
 		//
-		.ImageEnable		( ImageEnable		),
+		.ImageEnable		( FetchImageEnable  ),
 		.ProcessIdle		( JpegDecodeIdle	),
 
 		// UseData
 		.UseBit			( UseBit			),
 		.UseWidth			( UseWidth			),
 		.UseByte			( UseByte			),
-		.UseWord			( UseWord			)
+		.UseWord			( UseWord			),
+		.AlignByte          ( AlignByte         )
 		);
 
 	//--------------------------------------------------------------------------
@@ -102,7 +109,12 @@ module aq_djpeg(
 	wire [7:0]		HuffmanStart;
 
 	wire [11:0]		JpegBlockWidth;
+	wire [11:0]     JpegBlockHeight;
 	wire [2:0]		JpegComp;
+	wire [1:0]      SubSamplingW;
+	wire [1:0]      SubSamplingH;
+	wire [15:0]     JpegRestart;
+
 
 	aq_djpeg_fsm u_jpeg_fsm(
 		.rst				( rst				),
@@ -111,13 +123,16 @@ module aq_djpeg(
 		// From FIFO
 		.DataInEnable		( JpegDataEnable	),
 		.DataIn			( JpegData			),
+		.DataInEnd          ( JpegDataEnd       ),
 
 		.JpegDecodeIdle	( JpegDecodeIdle	),
 
 		.OutWidth			( OutWidth			),
 		.OutHeight			( OutHeight		),
 		.OutBlockWidth	( JpegBlockWidth	),
+		.OutBlockHeight	( JpegBlockHeight	),
 		.OutEnable			( OutEnable		),
+		.OutReady			( OutReady		),
 		.OutPixelX			( OutPixelX		),
 		.OutPixelY			( OutPixelY		),
 
@@ -142,7 +157,12 @@ module aq_djpeg(
 
 		//
 		.ImageEnable		( ImageEnable		),
+		.FetchImageEnable	( FetchImageEnable	),
 		.JpegComp			( JpegComp			),
+		.JpegProgressive    ( JpegProgressive   ),
+		.OutputSubSamplingW ( SubSamplingW      ),
+		.OutputSubSamplingH ( SubSamplingH      ),
+		.JpegRestart        ( JpegRestart       ),
 
 		//
 		.UseByte			( UseByte			),
@@ -154,6 +174,8 @@ module aq_djpeg(
 	wire [2:0]		HmDecColor;
 	wire			HmRead;
 	wire [4:0]		HmAddress;
+
+	wire            HmNextBlock;
 
 	wire [15:0]		HmDataA, HmDataB;
 
@@ -187,10 +209,18 @@ module aq_djpeg(
 		.DataInEnable			( JpegDataEnable	),
 		.DataIn				( JpegData			),
 		.JpegComp				( JpegComp			),
+		.JpegProgressive        ( JpegProgressive   ),
+		.JpegBlockWidth         ( JpegBlockWidth    ),
+		.JpegBlockHeight        ( JpegBlockHeight   ),
+		.SubSamplingW           ( SubSamplingW      ),
+		.SubSamplingH           ( SubSamplingH      ),
+		.JpegRestart            ( JpegRestart       ),
 
 		// Output decode data
+		.DecodeNextBlock        ( HmNextBlock       ),
 		.DecodeUseBit			( UseBit			),
 		.DecodeUseWidth		( UseWidth			),
+		.DecodeAlignByte        ( AlignByte         ),
 
 		// Data Out
 		.DataOutEnable		( HmDecEnable		),
@@ -240,7 +270,10 @@ module aq_djpeg(
 
 		.ProcessInit		( JpegDecodeIdle	),
 		.JpegComp			( JpegComp			),
+		.SubSamplingW       ( SubSamplingW      ),
+		.SubSamplingH       ( SubSamplingH      ),
 
+		.DecoderNextBlock   ( HmNextBlock   ),
 		.DataInEnable		( DctEnable		),
 		.DataInPage		( DctPage			),
 		.DataInCount		( DctCount			),
@@ -250,6 +283,7 @@ module aq_djpeg(
 		.DataInBlockWidth	( JpegBlockWidth	),
 		.DataInFull		( DataInFull		),
 
+		.OutReady			( OutReady			),
 		.OutEnable			( ColorEnable		),
 		.OutPixelX			( ColorPixelX		),
 		.OutPixelY			( ColorPixelY		),

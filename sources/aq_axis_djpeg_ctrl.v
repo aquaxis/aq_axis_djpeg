@@ -53,13 +53,12 @@ module aq_axis_djpeg_ctrl
   // Local Interface
   output        LOGIC_RST,
   input         LOGIC_IDLE,
+  input         LOGIC_PROGRESSIVE,
 
   input [15:0]  WIDTH,
   input [15:0]  HEIGHT,
   input [15:0]  PIXELX,
-  input [15:0]  PIXELY,
-
-  output [31:0] DEBUG
+  input [15:0]  PIXELY
 );
 
 /*
@@ -196,7 +195,7 @@ module aq_axis_djpeg_ctrl
   // Write Register
   always @(posedge ACLK   ) begin
     if(!ARESETN) begin
-      reg_rst <= 1'b0;
+      reg_rst <= 1'b1;
     end else begin
       if(wr_ena) begin
         case(local_addr[7:0] & 8'hFC)
@@ -223,7 +222,7 @@ module aq_axis_djpeg_ctrl
       rd_ack <= rd_ena;
       if(rd_ena) begin
         case(local_addr[7:0] & 8'hFC)
-          A_STATUS: reg_rdata[31:0] <= {reg_rst, 30'd0, LOGIC_IDLE};
+          A_STATUS: reg_rdata[31:0] <= {reg_rst, 7'b0, 8'b0, 7'b0, LOGIC_PROGRESSIVE, 7'b0, LOGIC_IDLE};
           A_SIZE:   reg_rdata[31:0] <= {HEIGHT[15:0], WIDTH[15:0]};
           A_PIXEL:  reg_rdata[31:0] <= {PIXELY[15:0], PIXELX[15:0]};
           default:  reg_rdata[31:0] <= 32'd0;
@@ -235,7 +234,5 @@ module aq_axis_djpeg_ctrl
   end
 
   assign LOGIC_RST = reg_rst;
-
-  assign DEBUG[31:0] = {32'd0};
 
 endmodule

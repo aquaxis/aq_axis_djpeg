@@ -20,6 +20,7 @@ module aq_djpeg_fsm(
 	// From FIFO
 	input			DataInEnable,
 	input [31:0]	DataIn,
+	input           DataInEnd,
 
 	output			JpegDecodeIdle,	// Deocder Process Idle(1:Idle, 0:Run)
 
@@ -27,10 +28,12 @@ module aq_djpeg_fsm(
 	output [15:0]	OutWidth,
 	output [15:0]	OutHeight,
 	output [11:0]	OutBlockWidth,
+	output [11:0]	OutBlockHeight,
 	input			OutEnable,
+	input			OutReady,
 	input [15:0]	OutPixelX,
 	input [15:0]	OutPixelY,
-
+    
 	//
 	output			DqtEnable,
 	output			DqtTable,
@@ -52,7 +55,12 @@ module aq_djpeg_fsm(
 
 	//
 	output			ImageEnable,
+	output          FetchImageEnable,
 	output reg [2:0]	JpegComp,
+	output          JpegProgressive,
+	output reg [15:0]  JpegRestart,
+	output [1:0]    OutputSubSamplingW,
+	output [1:0]    OutputSubSamplingH,
 
 	//
 	output			UseByte,
@@ -63,46 +71,52 @@ module aq_djpeg_fsm(
 	// Read Maker from Jpeg Data
 	//--------------------------------------------------------------------------
 	// State Machine localparam
-	localparam S_Idle					= 5'd0;
-	localparam S_GetMarker			= 5'd1;
-	localparam S_ImageData			= 5'd2;
+	localparam S_Idle				= 6'd0;
+	localparam S_GetMarker			= 6'd1;
+	localparam S_ImageData			= 6'd2;
 	// APP Segment
-	localparam S_APPLength			= 5'd3;
-	localparam S_APPRead				= 5'd4;
+	localparam S_APPLength			= 6'd3;
+	localparam S_APPRead			= 6'd4;
 	// DQT Segment
-	localparam S_DQTLength			= 5'd5;
-	localparam S_DQTTable			= 5'd6;
-	localparam S_DQTRead				= 5'd7;
+	localparam S_DQTLength			= 6'd5;
+	localparam S_DQTTable			= 6'd6;
+	localparam S_DQTRead			= 6'd7;
 	// DHT Segmen
-	localparam S_DHTLength			= 5'd8;
-	localparam S_DHTTable			= 5'd9;
-	localparam S_DHTMakeHm0			= 5'd10;
-	localparam S_DHTMakeHm1			= 5'd11;
-	localparam S_DHTMakeHm2			= 5'd12;
-	localparam S_DHTReadTable		= 5'd13;
+	localparam S_DHTLength			= 6'd8;
+	localparam S_DHTTable			= 6'd9;
+	localparam S_DHTMakeHm0			= 6'd10;
+	localparam S_DHTMakeHm1			= 6'd11;
+	localparam S_DHTMakeHm2			= 6'd12;
+	localparam S_DHTReadTable		= 6'd13;
 	// SOS Segment
-	localparam S_SOSLength			= 5'd14;
-	localparam S_SOSRead0			= 5'd15;
-	localparam S_SOSRead1			= 5'd16;
-	localparam S_SOSRead2			= 5'd17;
-	localparam S_SOSRead3			= 5'd18;
-	localparam S_SOSRead4			= 5'd19;
+	localparam S_SOSLength			= 6'd14;
+	localparam S_SOSRead0			= 6'd15;
+	localparam S_SOSRead1			= 6'd16;
+	localparam S_SOSRead2			= 6'd17;
+	localparam S_SOSRead3			= 6'd18;
+	localparam S_SOSRead4			= 6'd19;
 	// SOF Segment
-	localparam S_SOFLength			= 5'd20;
-	localparam S_SOFRead0			= 5'd21;
-	localparam S_SOFReadY			= 5'd22;
-	localparam S_SOFReadX			= 5'd23;
-	localparam S_SOFReadComp			= 5'd24;
-	localparam S_SOFReadCompColor	= 5'd25;
-	localparam S_SOFReadCompColor0	= 5'd26;
-	localparam S_SOFReadCompColor1	= 5'd27;
-	localparam S_SOFReadCompColor2	= 5'd28;
-	localparam S_SOFMakeBlock0		= 5'd29;
-	localparam S_SOFMakeBlock1		= 5'd30;
-
-	reg [4:0]		State;
+	localparam S_SOFLength			= 6'd20;
+	localparam S_SOFRead0			= 6'd21;
+	localparam S_SOFReadY			= 6'd22;
+	localparam S_SOFReadX			= 6'd23;
+	localparam S_SOFReadComp		= 6'd24;
+	localparam S_SOFReadCompColor	= 6'd25;
+	localparam S_SOFReadCompColor0	= 6'd26;
+	localparam S_SOFReadCompColor1	= 6'd27;
+	localparam S_SOFReadCompColor2	= 6'd28;
+	localparam S_SOFMakeBlock0		= 6'd29;
+	localparam S_SOFMakeBlock1		= 6'd30;
+	// EOI Segment
+	localparam S_WaitEOI            = 6'd31;
+	// DRI Segment
+	localparam S_DRILength          = 6'd32;
+    localparam S_DRIRead            = 6'd33;
+    
+	reg [5:0]		State;
 	//wire			ImageEnable;
 	reg [15:0]		ReadCount;
+	reg [15:0]		TableReadCount;
 
 	reg [15:0]		JpegWidth;
 	reg [15:0]		JpegHeight;
@@ -118,30 +132,48 @@ module aq_djpeg_fsm(
 
 	reg [15:0]		JpegBlockWidth;
 	reg [15:0]		JpegBlockHeight;
+	
+	reg [1:0]       ComponentNum;
+	reg [1:0]       SubSamplingW;
+	reg [1:0]       SubSamplingH;
+
+    reg             JpegProgressive;
 
 	reg				ImageEnable;
+	reg				FetchImageEnable;
+	
+	reg            LastDataEnable;
 
 	always @(posedge clk ) begin
 		if(!rst) begin
 			State				<= S_Idle;
 			ReadCount			<= 16'd0;
+			TableReadCount		<= 16'd0;
 			JpegWidth			<= 16'd0;
 			JpegHeight			<= 16'd0;
 			ReadDqtTable		<= 1'b0;
 			ReadDhtTable		<= 2'd0;
-			HmShift			<= 16'd0;
+			HmShift			    <= 16'd0;
 			HmData				<= 16'd0;
 			HmMax				<= 8'd0;
-			HmCount			<= 8'd0;
+			HmCount			    <= 8'd0;
 			HmEnable			<= 1'b0;
-			JpegBlockWidth	<= 16'd0;
-			JpegBlockHeight	<= 16'd0;
+			JpegBlockWidth	    <= 16'd0;
+			JpegBlockHeight	    <= 16'd0;
 			JpegComp			<= 3'd0;
-			ImageEnable		<= 1'b0;
+			JpegProgressive     <= 1'b0;
+			ComponentNum        <= 2'd0;
+			SubSamplingW        <= 2'd0;
+			SubSamplingH        <= 2'd0;
+			ImageEnable		    <= 1'b0;
+			FetchImageEnable	<= 1'b0;
+			JpegRestart         <= 16'd0;
+			LastDataEnable      <= 1'b0;
 		end else begin
 			case(State)
 				S_Idle: begin
-					if(DataInEnable == 1'b1) begin
+				    LastDataEnable <= DataInEnable;
+					if(DataInEnable && LastDataEnable) begin
 						State	<= S_GetMarker;
 					end
 				end
@@ -164,13 +196,18 @@ module aq_djpeg_fsm(
 							end
 							16'hFFC0: begin		// SOF0 Segment
 								State <= S_SOFLength;
+								JpegProgressive <= 1'b0;
+							end
+							16'hFFC2: begin		// SOF2 Segment
+								State <= S_SOFLength;
+								JpegProgressive <= 1'b1;
 							end
 							16'hFFDA: begin		// SOS Segment
 								State <= S_SOSLength;
 							end
-							//16'hFFDD: begin		// DRI Segment
-							//		State <= S_DRI;
-							//end
+							16'hFFDD: begin		// DRI Segment
+								State <= S_DRILength;
+							end
 							//16'hFFDx: begin		// RSTn Segment
 							//		State <= S_RST;
 							//end
@@ -206,6 +243,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State		<= S_DQTTable;
 						ReadCount	<= DataIn[31:16] -16'd2;
+						TableReadCount <= DataIn[31:16] - 16'd2;
 					end
 				end
 				S_DQTTable: begin
@@ -213,14 +251,20 @@ module aq_djpeg_fsm(
 						State			<= S_DQTRead;
 						ReadDqtTable	<= DataIn[24];
 						ReadCount		<= 16'd0;
+						TableReadCount  <= TableReadCount - 1'd1;
 					end
 				end
 				S_DQTRead: begin
 					if(DataInEnable == 1'b1) begin
 						if(ReadCount ==63) begin
-							State		<= S_GetMarker;
+							if(TableReadCount == 1) begin
+								State		<= S_GetMarker;
+							end else begin
+								State		<= S_DQTTable;
+							end
 						end
 						ReadCount		<= ReadCount +16'd1;
+						TableReadCount  <= TableReadCount - 1'd1;
 					end
 				end
 
@@ -229,6 +273,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State			<= S_DHTTable;
 						ReadCount		<= DataIn[31:16];
+						TableReadCount  <= DataIn[31:16] - 16'd2;
 					end
 				end
 				S_DHTTable: begin
@@ -240,8 +285,9 @@ module aq_djpeg_fsm(
 							8'h01: ReadDhtTable <= 2'b10;
 							8'h11: ReadDhtTable <= 2'b11;
 						endcase
+						TableReadCount <= TableReadCount - 1'd1;
 					end
-					HmShift		<= 16'h8000;
+					HmShift		    <= 16'h8000;
 					HmData			<= 16'h0000;
 					HmMax			<= 8'h00;
 					ReadCount		<= 16'd0;
@@ -250,6 +296,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State		<= S_DHTMakeHm1;
 						HmCount	<= DataIn[31:24];
+					    TableReadCount <= TableReadCount - 1'd1;
 					end
 					HmEnable		<= 1'b0;
 				end
@@ -277,9 +324,14 @@ module aq_djpeg_fsm(
 					HmEnable	<= 1'b0;
 					if(DataInEnable == 1'b1) begin
 						if(HmMax == HmCount +1) begin
-							State	<= S_GetMarker;
+							if(TableReadCount == 1) begin
+								State	<= S_GetMarker;
+							end else begin
+								State	<= S_DHTTable;
+							end
 						end
 						HmCount	<= HmCount +8'd1;
+						TableReadCount <= TableReadCount - 1'd1;
 					end
 				end
 
@@ -319,6 +371,7 @@ module aq_djpeg_fsm(
 					if(DataInEnable == 1'b1) begin
 						State			<= S_ImageData;
 						ImageEnable	<= 1'b1;
+						FetchImageEnable <= 1'b1;
 					end
 				end
 
@@ -370,11 +423,17 @@ module aq_djpeg_fsm(
 				S_SOFReadCompColor0: begin
 					if(DataInEnable == 1'b1) begin
 						State			<= S_SOFReadCompColor1;
+						// Tracking component ID
+						ComponentNum    <= DataIn[25:24];
 					end
 				end
 				S_SOFReadCompColor1: begin
 					if(DataInEnable == 1'b1) begin
 						State			<= S_SOFReadCompColor2;
+						if (ComponentNum == 2'd1) begin
+						  SubSamplingW  <= DataIn[29:28];
+						  SubSamplingH  <= DataIn[25:24];
+						end
 					end
 				end
 				S_SOFReadCompColor2: begin
@@ -389,34 +448,45 @@ module aq_djpeg_fsm(
 				end
 				S_SOFMakeBlock0:begin
 					State				<= S_SOFMakeBlock1;
-					if(JpegComp == 3) begin
-						// コンポーネント数が3の場合、16x16が1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	+16'd15;
-						JpegBlockHeight	<= JpegBlockHeight +16'd15;
-					end else begin
-						// コンポーネント数が1の場合、32x8が1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	+16'd31;
-						JpegBlockHeight	<= JpegBlockHeight +16'd7;
-					end
+					JpegBlockWidth  <= JpegBlockWidth  + ((SubSamplingW == 2'd2) ? 16'd15 : 16'd7);
+					JpegBlockHeight	<= JpegBlockHeight + ((SubSamplingH == 2'd2) ? 16'd15 : 16'd7);
 				end
 				S_SOFMakeBlock1:begin
 					State				<= S_GetMarker;
-					if(JpegComp == 3) begin
-						// コンポーネント数が3の場合、16x16が1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	>> 4;
-						JpegBlockHeight	<= JpegBlockHeight >> 4;
-					end else begin
-						// コンポーネント数が1の場合、32x8が1ブロック
-						JpegBlockWidth	<= JpegBlockWidth	>> 5;
-						JpegBlockHeight	<= JpegBlockHeight >> 3;
+					JpegBlockWidth	<= JpegBlockWidth	>> ((SubSamplingW == 2'd2) ? 4 : 3);
+					JpegBlockHeight	<= JpegBlockHeight  >> ((SubSamplingH == 2'd2) ? 4 : 3);
+				end
+                
+                // DRI Segment
+                S_DRILength: begin
+					if(DataInEnable == 1'b1) begin
+						State		<= S_DRIRead;
+					end
+				end
+				S_DRIRead: begin
+					if(DataInEnable == 1'b1) begin
+						State		<= S_GetMarker;
+						JpegRestart	<= DataIn[31:16];
+					end
+	            end
+				// Image Process
+				S_ImageData: begin
+					if(OutEnable & OutReady & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
+						ImageEnable	<= 1'b0;
+						if (DataInEnd) begin
+							State           <= S_Idle;
+							LastDataEnable  <= 1'b0;
+						    FetchImageEnable <= 1'b0;
+						end else
+							State			<= S_WaitEOI;
 					end
 				end
 
-				// Image Process
-				S_ImageData: begin
-					if(OutEnable & (JpegWidth == (OutPixelX +1)) & (JpegHeight == (OutPixelY +1))) begin
-						State			<= S_Idle;
-						ImageEnable	<= 1'b0;
+				S_WaitEOI: begin
+					if(DataInEnd) begin
+						State           <= S_Idle;
+					    LastDataEnable  <= 1'b0;
+						FetchImageEnable <= 1'b0;
 					end
 				end
 			endcase
@@ -428,14 +498,16 @@ module aq_djpeg_fsm(
 												(State == S_DHTTable) | (State == S_DHTMakeHm0) | (State == S_DHTReadTable) |
 												(State == S_SOSRead0) | (State == S_SOSRead2) | (State == S_SOSRead3) | (State == S_SOSRead4) |
 												(State == S_SOFRead0) | (State == S_SOFReadComp) |
-												(State == S_SOFReadComp) | (State == S_SOFReadCompColor0) | (State == S_SOFReadCompColor1) | (State == S_SOFReadCompColor2)
+												(State == S_SOFReadComp) | (State == S_SOFReadCompColor0) | (State == S_SOFReadCompColor1) | (State == S_SOFReadCompColor2) |
+												(State == S_WaitEOI)
 												);
 	assign UseWord = (DataInEnable == 1'b1) & ((State == S_GetMarker) |
 												(State == S_APPLength) |
 												(State == S_DQTLength) |
 												(State == S_DHTLength) |
 												(State == S_SOSLength) | (State == S_SOSRead1) |
-												(State == S_SOFLength) | (State == S_SOFReadX) | (State == S_SOFReadY)
+												(State == S_SOFLength) | (State == S_SOFReadX) | (State == S_SOFReadY) |
+												(State == S_DRILength) | (State == S_DRIRead)
 												);
 
 	assign JpegDecodeIdle	= (State == S_Idle);
@@ -444,6 +516,9 @@ module aq_djpeg_fsm(
 	assign OutWidth		= JpegWidth;
 	assign OutHeight		= JpegHeight;
 	assign OutBlockWidth	= JpegBlockWidth[11:0];
+	assign OutBlockHeight   = JpegBlockHeight[11:0];
+	assign OutputSubSamplingW = SubSamplingW;
+	assign OutputSubSamplingH = SubSamplingH;
 
 	assign DqtEnable		= (State == S_DQTRead);
 	assign DqtTable		= ReadDqtTable;
