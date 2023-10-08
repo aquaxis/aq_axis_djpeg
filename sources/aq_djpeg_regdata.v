@@ -26,6 +26,7 @@ module aq_djpeg_regdata(
 	// DataOut
 	output [31:0]	DataOut,			// Data Out
 	output			DataOutEnable,	// Data Out Enable
+	output          DataOutEnd,
 
 	input			ImageEnable,
 	input			ProcessIdle,
@@ -34,7 +35,8 @@ module aq_djpeg_regdata(
 	input			UseBit,		// Used data bit
 	input [6:0]	UseWidth,		// Used data bit width
 	input			UseByte,		// Used data byte
-	input			UseWord		// Used data word
+	input			UseWord,		// Used data word
+	input           AlignByte      // Align to next byte boundary for RSTn
 );
 	wire			RegValid;
 	reg [95:0]		RegData;
@@ -59,48 +61,106 @@ module aq_djpeg_regdata(
 			CheckMode	<= 1'b0;
 			ImageReady	<= 1'b0;
 		end else begin
-			if(DataEnd == 1'b1 & ((ProcessIdle == 1'b1) | (RegWidth <= 48))) begin
+			if(DataEnd == 1'b1 & ProcessIdle == 1'b1) begin
 				RegData	<= 96'd0;
 				RegWidth	<= 7'd0;
 				CheckMode	<= 1'b0;
 				ImageReady	<= 1'b0;
 			end else if(RegValid == 1'b0 & (DataInEnable == 1'b1 | DataEnd == 1'b1)) begin
 				if(ImageReady == 1'b1) begin
+				    // Group 1
 					if(RegData[39: 8] == 32'hFF00FF00 & CheckMode != 1'b1) begin
 						RegWidth		<= RegWidth + 7'd16;
 						RegData[95:64]	<= {8'h00,RegData[71:48]};
 						RegData[63:32]	<= {RegData[47:40],16'hFFFF,RegData[7:0]};
 						CheckMode		<= 1'b0;
+					end else if(RegData[39: 28] == 12'hFFD & RegData[23: 8] == 16'hFF00 & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {16'h0000,RegData[71:56]};
+						RegData[63:32]	<= {RegData[55:40],8'hFF,RegData[7:0]};
+						CheckMode		<= 1'b0;
+					end else if(RegData[39: 24] == 16'hFFD0 & RegData[23:12] == 12'hFFD & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {16'h0000,RegData[71:56]};
+						RegData[63:32]	<= {RegData[55:40],8'hFF,RegData[7:0]};
+						CheckMode		<= 1'b0;
+					// Group 2
 					end else if(RegData[39:24] == 16'hFF00 & RegData[15: 0] == 16'hFF00 & CheckMode != 1'b1) begin
 						RegWidth		<= RegWidth + 7'd16;
 						RegData[95:64]	<= {8'h00,RegData[71:48]};
 						RegData[63:32]	<= {RegData[47:40],8'hFF,RegData[23:16],8'hFF};
 						CheckMode		<= 1'b1;
+					end else if(RegData[39:28] == 12'hFFD & RegData[15: 0] == 16'hFF00 & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {16'h0000,RegData[71:56]};
+						RegData[63:32]	<= {RegData[55:40],RegData[23:16],8'hFF};
+						CheckMode		<= 1'b1;
+					end else if(RegData[39:24] == 16'hFF00 & RegData[15: 4] == 16'hFFD & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {16'h0000,RegData[71:56]};
+						RegData[63:32]	<= {RegData[55:40],8'hFF,RegData[23:16]};
+						CheckMode		<= 1'b1;
+					// Group 3
 					end else if(RegData[31: 0] == 32'hFF00FF00) begin
 						RegWidth		<= RegWidth + 7'd16;
 						RegData[95:64]	<= {16'h0000,RegData[63:48]};
 						RegData[63:32]	<= {RegData[47:32],16'hFFFF};
 						CheckMode		<= 1'b1;
+					end else if(RegData[31: 20] == 12'hFFD & RegData[15: 0] == 16'hFF00 & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {24'h000000,RegData[63:56]};
+						RegData[63:32]	<= {RegData[55:32],8'hFF};
+						CheckMode		<= 1'b1;
+					end else if(RegData[31: 16] == 16'hFF00 & RegData[15: 4] == 12'hFFD & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd8;
+						RegData[95:64]	<= {24'h000000,RegData[63:56]};
+						RegData[63:32]	<= {RegData[55:32],8'hFF};
+						CheckMode		<= 1'b1;
+					// Group 4
 					end else if(RegData[39:24] == 16'hFF00 & CheckMode != 1'b1) begin
 						RegWidth		<= RegWidth + 7'd24;
 						RegData[95:64]	<= {RegData[71:40]};
 						RegData[63:32]	<= {8'hFF,RegData[23:0]};
 						CheckMode		<= 1'b0;
+					end else if(RegData[39:28] == 12'hFFD & CheckMode != 1'b1) begin
+						RegWidth		<= RegWidth + 7'd16;
+						RegData[95:64]	<= {8'h00,RegData[71:48]};
+						RegData[63:32]	<= {RegData[47:40], RegData[23:0]};
+						CheckMode		<= 1'b0;
+					// Group 5
 					end else if(RegData[31:16] == 16'hFF00) begin
 						RegWidth		<= RegWidth + 7'd24;
 						RegData[95:64]	<= {RegData[71:40]};
 						RegData[63:32]	<= {RegData[39:32],8'hFF,RegData[15:0]};
 						CheckMode		<= 1'b0;
+					end else if(RegData[31:20] == 12'hFFD) begin
+						RegWidth		<= RegWidth + 7'd16;
+						RegData[95:64]	<= {8'h00,RegData[71:48]};
+						RegData[63:32]	<= {RegData[47:32], RegData[15:0]};
+						CheckMode		<= 1'b0;
+					// Group 6
 					end else if(RegData[23: 8] == 16'hFF00) begin
 						RegWidth		<= RegWidth + 7'd24;
 						RegData[95:64]	<= {RegData[71:40]};
 						RegData[63:32]	<= {RegData[39:32],RegData[31:24],8'hFF,RegData[7:0]};
 						CheckMode		<= 1'b0;
+					end else if(RegData[23:12] == 12'hFFD) begin
+						RegWidth		<= RegWidth + 7'd16;
+						RegData[95:64]	<= {8'h00,RegData[71:48]};
+						RegData[63:32]	<= {RegData[47:24], RegData[7:0]};
+						CheckMode		<= 1'b0;
+					// Group 7
 					end else if(RegData[15: 0] == 16'hFF00) begin
 						RegWidth		<= RegWidth + 7'd24;
 						RegData[95:64]	<= {RegData[71:40]};
 						RegData[63:32]	<= {RegData[39:32],RegData[31:16],8'hFF};
 						CheckMode		<= 1'b1;
+					end else if(RegData[15: 4] == 12'hFFD) begin
+						RegWidth		<= RegWidth + 7'd16;
+						RegData[95:64]	<= {8'h00,RegData[71:48]};
+						RegData[63:32]	<= {RegData[47:16]};
+						CheckMode		<= 1'b0;
+					// Group 8
 					end else begin
 						RegWidth		<= RegWidth + 7'd32;
 						RegData[95:64]	<= RegData[63:32];
@@ -151,6 +211,8 @@ module aq_djpeg_regdata(
 				RegWidth <= RegWidth - 7'd8;
 			end else if(UseWord == 1'b1) begin
 				RegWidth <= RegWidth - 7'd16;
+			end else if(AlignByte == 1'b1) begin
+			    RegWidth <= {RegWidth[6:3], 3'b0};
 			end
 		end
 	end
@@ -256,13 +318,14 @@ module aq_djpeg_regdata(
 				PreEnable	<= 1'b0;
 				DataOut	<= 32'h00000000;
 			end else begin
-				OutEnable	<= RegValid;
-				PreEnable	<= (UseBit == 1'b1 | UseByte == 1'b1 | UseWord == 1'b1);
+				OutEnable	<= RegValid & !PreImageEnable; // Avoid image data output before the first shift into higher bits
+				PreEnable	<= (UseBit == 1'b1 | UseByte == 1'b1 | UseWord == 1'b1 | AlignByte == 1'b1);
 				DataOut	<= SliceData(RegData,RegWidth);
 			end
 		end
 	end
 
 	assign DataOutEnable = (PreEnable == 1'b0)?OutEnable:1'b0;
+	assign DataOutEnd = DataEnd;
 
 endmodule

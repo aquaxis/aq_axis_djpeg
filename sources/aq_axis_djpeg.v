@@ -53,7 +53,7 @@ module aq_axis_djpeg
   input         S_AXI_RREADY,
 
   // AXI Stream input
-  input         S_AXIS_TCLK,
+  input         TCLK,
   input [31:0]  S_AXIS_TDATA,
   input         S_AXIS_TKEEP,
   input         S_AXIS_TLAST,
@@ -62,29 +62,16 @@ module aq_axis_djpeg
   input         S_AXIS_TVALID,
 
   // AXI Stream output
-  output        M_AXIS_TCLK,
   output [31:0] M_AXIS_TDATA,
+  output [47:0] M_AXIS_TUSER,
   output        M_AXIS_TKEEP,
   output        M_AXIS_TLAST,
   input         M_AXIS_TREADY,
   output [3:0]  M_AXIS_TSTRB,
-  output        M_AXIS_TVALID,
-
-  // JPEG Data In
-  input [31:0]  DATA_IN,
-  input         EMPTY,
-  output        READ,
-
-
-// Bitmap Data Out
-  output [31:0] DATA_OUT,
-  output        WRITE,
-  input         FULL,
-
-  output [31:0] DEBUG
+  output        M_AXIS_TVALID
 );
 
-wire JpegDecodeRst, JpegDecodeIdle;
+wire JpegDecodeRst, JpegDecodeIdle, JpegProgressive;
 wire [15:0] OutWidth, OutHeight, OutPixelX, OutPixelY;
 wire [7:0] OutR, OutG, OutB;
 
@@ -121,27 +108,32 @@ wire [7:0] OutR, OutG, OutB;
 
     .LOGIC_RST      ( JpegDecodeRst   ),
     .LOGIC_IDLE     ( JpegDecodeIdle  ),
+    .LOGIC_PROGRESSIVE(JpegProgressive),
 
     .WIDTH          ( OutWidth[15:0]  ),
     .HEIGHT         ( OutHeight[15:0] ),
     .PIXELX         ( OutPixelX[15:0] ),
-    .PIXELY         ( OutPixelY[15:0] ),
-
-    .DEBUG          ()
+    .PIXELY         ( OutPixelY[15:0] )
   );
+
+wire JpegInHandshake;
+
+assign JpegInHandshake = S_AXIS_TVALID & S_AXIS_TREADY;
 
 aq_djpeg u_aq_djpeg(
   .rst            ( ~JpegDecodeRst  ),
-  .clk            ( S_AXIS_TCLK     ),
+  .clk            ( TCLK     ),
 
   // From FIFO
   .DataIn         ( S_AXIS_TDATA[31:0]  ),
-  .DataInEnable   ( S_AXIS_TVALID   ),
+  .DataInEnable   ( JpegInHandshake   ),
   .DataInRead     (),
   .DataInReq      ( S_AXIS_TREADY   ),
 
   .JpegDecodeIdle ( JpegDecodeIdle  ),
+  .JpegProgressive( JpegProgressive  ),
 
+  .OutReady       ( M_AXIS_TREADY   ),
   .OutEnable      ( M_AXIS_TVALID   ),
   .OutWidth       ( OutWidth[15:0]  ),
   .OutHeight      ( OutHeight[15:0] ),
@@ -152,13 +144,10 @@ aq_djpeg u_aq_djpeg(
   .OutB           ( OutB[7:0]       )
 );
 
-assign M_AXIS_TCLK = S_AXIS_TCLK;
 assign M_AXIS_TKEEP = 1'b0;
 assign M_AXIS_TLAST = (OutPixelX == (OutWidth - 1)) && (OutPixelY == (OutHeight - 1));
 assign M_AXIS_TSTRB = 4'b1111;
 assign M_AXIS_TDATA[31:0] = {8'd0, OutR[7:0], OutG[7:0], OutB[7:0]};
-//assign M_AXIS_TDATA[31:0] = {OutPixelY[15:0], OutPixelX[15:0]};
-
-assign DEBUG = 32'd0;
+assign M_AXIS_TUSER[47:0] = {OutWidth[15:0], OutPixelY[15:0], OutPixelX[15:0]};
 
 endmodule

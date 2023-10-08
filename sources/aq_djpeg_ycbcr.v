@@ -19,7 +19,10 @@ module aq_djpeg_ycbcr(
 
 	input			ProcessInit,
 	input [2:0]	JpegComp,
+	input [1:0]     SubSamplingW,
+	input [1:0]     SubSamplingH,
 
+	input           DecoderNextBlock,
 	input			DataInEnable,
 	input [2:0]	DataInPage,
 	input [1:0]	DataInCount,
@@ -29,6 +32,7 @@ module aq_djpeg_ycbcr(
 	input [11:0]	DataInBlockWidth,
 	output			DataInFull,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutPixelX,
 	output [15:0]	OutPixelY,
@@ -42,8 +46,10 @@ module aq_djpeg_ycbcr(
 
 	wire			ConvertEnable;
 	wire			ConvertRead;
+	wire            ConvertReadNext;
 	wire			ConvertBank;
-	wire [7:0]		ConvertAddress;
+	wire [7:0]		ConvertAddressY;
+	wire [7:0]		ConvertAddressCbCr;
 	wire [8:0]		DataY;
 	wire [8:0]		DataCb;
 	wire [8:0]		DataCr;
@@ -57,14 +63,22 @@ module aq_djpeg_ycbcr(
 			if(ProcessInit) begin
 				DataInColor <= 3'd0;
 			end else if((DataInEnable == 1'b1) && (DataInPage == 3'd7) && (DataInCount == 2'd3)) begin
-				// コンポーネント数が3ならYCbCrで411
+				// コンポーネント数が3ならYCbCrで444、422ど420
 				// コンポーネント数が1ならグレースケールで400
-				if(	((JpegComp == 3) && (DataInColor == 3'd5)) || 
-					((JpegComp == 1) && (DataInColor == 3'd3))) begin
-//				if(DataInColor == 3'd5) begin 
-					DataInColor <= 3'd0;
+				if (JpegComp == 3) begin
+					case (DataInColor)
+					3'd0: DataInColor <= (SubSamplingW == 2'd2) ? DataInColor +3'd1
+										: (SubSamplingH == 2'd2) ? 3'd2
+																	: 3'd4;
+					3'd1: DataInColor <= (SubSamplingH == 2'd2) ? DataInColor +3'd1
+																	: 3'd4;
+					3'd2: DataInColor <= (SubSamplingW == 2'd2) ? DataInColor +3'd1
+																	: 3'd4;
+					3'd5: DataInColor <= 3'd0;
+					default: DataInColor <= DataInColor +3'd1;
+					endcase
 				end else begin
-					DataInColor <= DataInColor + 3'd1;
+					DataInColor <= 3'd0;
 				end
 			end
 		end
@@ -80,6 +94,7 @@ module aq_djpeg_ycbcr(
 		.DataInit			( ProcessInit		),
 		.JpegComp			( JpegComp			),
 
+		.DecoderNextBlock   ( DecoderNextBlock  ),
 		.DataInEnable		( DataInEnable	),
 		.DataInColor		( DataInColor		),
 		.DataInPage		( DataInPage		),
@@ -89,8 +104,10 @@ module aq_djpeg_ycbcr(
 		.DataInFull		( DataInFull		),
 
 		.DataOutEnable	( ConvertEnable	),
-		.DataOutAddress	( ConvertAddress	),
+		.DataOutAddressY	( ConvertAddressY	),
+		.DataOutAddressCbCr	( ConvertAddressCbCr),
 		.DataOutRead		( ConvertRead		),
+		.DataOutReadNext    ( ConvertReadNext   ),
 		.DataOutY			( DataY			),
 		.DataOutCb			( DataCb			),
 		.DataOutCr			( DataCr			)
@@ -106,7 +123,7 @@ module aq_djpeg_ycbcr(
 			if(ProcessInit) begin
 				DataInBlockX <= 12'd0;
 				DataInBlockY <= 12'd0;
-			end else if((ConvertRead == 1'b1) && (ConvertAddress == 8'd255)) begin
+			end else if(ConvertReadNext) begin
 //				if(JpegComp == 3)  begin
 					if(DataInBlockWidth == DataInBlockX +1) begin
 						DataInBlockX <= 12'd0;
@@ -134,16 +151,22 @@ module aq_djpeg_ycbcr(
 		.rst		( rst				),
 		.clk		( clk				),
 
+		.DataInit	( ProcessInit		),
 		.InEnable	( ConvertEnable	),
 		.InRead	( ConvertRead		),
+		.InReadNext (ConvertReadNext),
 		.InBlockX	( DataInBlockX	),
 		.InBlockY	( DataInBlockY	),
 		.InComp	( JpegComp			),
-		.InAddress	( ConvertAddress	),
+		.SubSamplingW( SubSamplingW     ),
+		.SubSamplingH( SubSamplingH     ),
+		.InAddressY		( ConvertAddressY	),
+		.InAddressCbCr	( ConvertAddressCbCr),
 		.InY		( DataY			),
 		.InCb		( tDataCb			),
 		.InCr		( tDataCr			),
 
+		.OutReady   ( OutReady      ),
 		.OutEnable	( OutEnable		),
 		.OutPixelX	( OutPixelX		),
 		.OutPixelY	( OutPixelY		),

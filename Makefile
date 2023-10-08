@@ -1,5 +1,5 @@
 SHELL=/bin/bash
-SETTING=source /opt/Xilinx/Vivado/2020.2/settings64.sh
+SETTING=source /opt/Xilinx/Vivado/2023.1/settings64.sh
 
 .PHONY: all
 
@@ -22,4 +22,4 @@ sim:
 	cd simulation; ../model/raw_hex2bmp sim.dat output.bmp
 
 clean:
-	rm -rf aq_axis_djpeg *.log
+	rm -rf aq_axis_djpeg simulation *.log

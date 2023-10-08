@@ -20,16 +20,22 @@ module aq_djpeg_ycbcr2rgb(
 	input			clk,
 	input			rst,
 
+	input           DataInit,
 	input			InEnable,
 	output			InRead,
+	output          InReadNext,
 	input [11:0]	InBlockX,
 	input [11:0]	InBlockY,
 	input [2:0]	InComp,
-	output [7:0]	InAddress,
+	input [1:0]     SubSamplingW,
+	input [1:0]     SubSamplingH,
+	output [7:0]	InAddressY,
+	output [7:0]    InAddressCbCr,
 	input [8:0]	InY,
 	input [8:0]	InCb,
 	input [8:0]	InCr,
 
+	input           OutReady,
 	output			OutEnable,
 	output [15:0]	OutPixelX,
 	output [15:0]	OutPixelY,
@@ -42,6 +48,8 @@ module aq_djpeg_ycbcr2rgb(
 	reg [11:0]	 	RunBlockX;
 	reg [11:0]	 	RunBlockY;
 	reg [2:0]		RunComp;
+	reg [1:0]       RunSamplingW;
+	reg [1:0]       RunSamplingH;
 
 	always @(posedge clk ) begin
 		if(!rst) begin
@@ -50,28 +58,53 @@ module aq_djpeg_ycbcr2rgb(
 			RunBlockX	<= 12'h000;
 			RunBlockY	<= 12'h000;
 			RunComp	<= 1'b0;
+			RunSamplingW <= 2'b0;
+			RunSamplingH <= 2'b0;
 		end else begin
-			if(RunActive == 1'b0) begin
+			if(DataInit) begin
+				RunActive	<= 1'b0;
+				RunCount	<= 8'h00;
+			end if(RunActive == 1'b0) begin
 				if(InEnable == 1'b1) begin
 					RunActive	<= 1'b1;
 					RunBlockX	<= InBlockX;
 					RunBlockY	<= InBlockY;
 					RunComp	<= InComp;
+					RunSamplingW <= SubSamplingW;
+					RunSamplingH <= SubSamplingH;
 				end
 				RunCount	<= 8'h00;
 			end else begin
-				if(RunCount == 8'd255) begin
-					RunActive	<= 1'b0;
-					RunCount	<= 8'd0;
-				end else begin
-					RunCount	<= RunCount +8'd1;
+				if (OutReady) begin
+					if(InReadNext) begin
+						RunActive	<= 1'b0;
+						RunCount	<= 8'd0;
+					end else begin
+							if ((RunSamplingW == 2'd1) && (RunCount[2:0] == 3'd7))
+								RunCount    <= RunCount +8'd9;
+							else
+								RunCount	<= RunCount +8'd1;
+					end
 				end
 			end
 		end
 	end
 
-	assign InRead		= RunActive;
-	assign InAddress	= RunCount;
+	assign InReadNext = (RunActive && OutReady &&
+							( (RunSamplingW == 2'd1 && RunSamplingH == 2'd1) ? (RunCount == 8'd119)
+							: (RunSamplingW == 2'd2 && RunSamplingH == 2'd1) ? (RunCount == 8'd127)
+							: (RunSamplingW == 2'd1 && RunSamplingH == 2'd2) ? (RunCount == 8'd247)
+							// : (RunSamplingW == 2'd2 && RunSamplingH == 2'd2) ? (RunCount == 8'd255)
+							: (RunCount == 8'd255)
+							)
+						);
+
+	assign InRead		= RunActive && OutReady;
+	assign InAddressY	= RunCount;
+	assign InAddressCbCr[7:5] = (RunSamplingH == 2'd2) ? RunCount[7:5] : RunCount[6:4];
+	assign InAddressCbCr[4] = 1'b0;
+	assign InAddressCbCr[3:1] = (RunSamplingW == 2'd2) ? RunCount[3:1] : RunCount[2:0];
+	assign InAddressCbCr[0] = 1'b0;
 
 	reg			PreEnable;
 	reg [15:0]	PreCountX;
@@ -139,6 +172,19 @@ module aq_djpeg_ycbcr2rgb(
 			g20r	<= 0;
 			b20r	<= 0;
 
+			PreEnable <= 1'b0;
+			PreCountX <= 16'h0000;
+			PreCountY <= 16'h0000;
+			Phase0Y   <= 9'h00;
+			Phase0Cb  <= 9'h00;
+			Phase0Cr  <= 9'h00;
+			Phase1Y   <= 9'h00;
+			Phase1Cb  <= 9'h00;
+			Phase1Cr  <= 9'h00;
+			Phase2Y   <= 9'h00;
+			Phase2Cb  <= 9'h00;
+			Phase2Cr  <= 9'h00;
+
 			Phase0Enable <= 1'b0;
 			Phase0CountX <= 16'h0000;
 			Phase0CountY <= 16'h0000;
@@ -152,66 +198,63 @@ module aq_djpeg_ycbcr2rgb(
 			Phase3CountX <= 16'h0000;
 			Phase3CountY <= 16'h0000;
 		end else begin
-			// Pre
-			PreEnable <= RunActive;
-			if(RunComp == 3) begin
-				// コンポーネント数が3のとき、16x16が1ブロック
-				PreCountX <= {RunBlockX,RunCount[3:0]};
-				PreCountY <= {RunBlockY,RunCount[7:4]};
-			end else begin
-				// コンポーネント数が1のとき、32x8が1ブロック
-				PreCountX <= {RunBlockX[10:0],RunCount[7],RunCount[3:0]};
-				PreCountY <= {1'b0,RunBlockY[11:0],RunCount[6:4]};
+			if (OutReady) begin
+				// Pre
+				PreEnable <= (DataInit) ? 1'b0 : RunActive;
+				
+				PreCountX <= (RunSamplingW == 2'd2) ? {RunBlockX,RunCount[3:0]} : {RunBlockX, RunCount[2:0]};
+				PreCountY <= (RunSamplingH == 2'd2) ? {RunBlockY,RunCount[7:4]} : {RunBlockY, RunCount[6:4]};
+
+
+				// Phase0
+				Phase0Enable	<= (DataInit) ? 1'b0 : PreEnable;
+				Phase0CountX	<= PreCountX;
+				Phase0CountY	<= PreCountY;
+				Phase0Y		<= DataY;
+				Phase0Cb		<= DataCb;
+				Phase0Cr		<= DataCr;
+
+				// Phase1
+				Phase1Enable	<= (DataInit) ? 1'b0 : Phase0Enable;
+				Phase1CountX	<= Phase0CountX;
+				Phase1CountY	<= Phase0CountY;
+
+				rgb00r <= 32'h02000000 + {Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8:0],18'h0000};
+				r00r	<= Phase0Cr * C_RR;
+				g00r	<= Phase0Cb * C_GB;
+				g01r	<= Phase0Cr * C_GR;
+				b00r	<= Phase0Cb * C_BB;
+
+				Phase1Y	<= Phase0Y;
+				Phase1Cb	<= Phase0Cb;
+				Phase1Cr	<= Phase0Cr;
+
+				// Phase2
+				Phase2Enable	<= (DataInit) ? 1'b0 : Phase1Enable;
+				Phase2CountX	<= Phase1CountX;
+				Phase2CountY	<= Phase1CountY;
+
+				r10r	<= rgb00r + r00r;
+				g10r	<= rgb00r - g00r;
+				g11r	<= g01r;
+				b10r	<= rgb00r + b00r;
+
+				Phase2Y	<= Phase1Y;
+				Phase2Cb	<= Phase1Cb;
+				Phase2Cr	<= Phase1Cr;
+
+				// Phase3
+				Phase3Enable	<= (DataInit) ? 1'b0 : Phase2Enable;
+				Phase3CountX	<= Phase2CountX;
+				Phase3CountY	<= Phase2CountY;
+				r20r	<= r10r;
+				g20r	<= g10r - g11r;
+				b20r	<= b10r;
 			end
-
-			// Phase0
-			Phase0Enable	<= PreEnable;
-			Phase0CountX	<= PreCountX;
-			Phase0CountY	<= PreCountY;
-			Phase0Y		<= DataY;
-			Phase0Cb		<= DataCb;
-			Phase0Cr		<= DataCr;
-
-			// Phase1
-			Phase1Enable	<= Phase0Enable;
-			Phase1CountX	<= Phase0CountX;
-			Phase1CountY	<= Phase0CountY;
-
-			rgb00r <= 32'h02000000 + {Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8],Phase0Y[8:0],18'h0000};
-			r00r	<= Phase0Cr * C_RR;
-			g00r	<= Phase0Cb * C_GB;
-			g01r	<= Phase0Cr * C_GR;
-			b00r	<= Phase0Cb * C_BB;
-
-			Phase1Y	<= Phase0Y;
-			Phase1Cb	<= Phase0Cb;
-			Phase1Cr	<= Phase0Cr;
-
-			// Phase2
-			Phase2Enable	<= Phase1Enable;
-			Phase2CountX	<= Phase1CountX;
-			Phase2CountY	<= Phase1CountY;
-
-			r10r	<= rgb00r + r00r;
-			g10r	<= rgb00r - g00r;
-			g11r	<= g01r;
-			b10r	<= rgb00r + b00r;
-
-			Phase2Y	<= Phase1Y;
-			Phase2Cb	<= Phase1Cb;
-			Phase2Cr	<= Phase1Cr;
-
-			// Phase3
-			Phase3Enable	<= Phase2Enable;
-			Phase3CountX	<= Phase2CountX;
-			Phase3CountY	<= Phase2CountY;
-			r20r	<= r10r;
-			g20r	<= g10r - g11r;
-			b20r	<= b10r;
 		end
 	end
 
-	assign OutEnable	= Phase3Enable;
+	assign OutEnable	= (DataInit) ? 1'b0 : Phase3Enable;
 	assign OutPixelX	= Phase3CountX;
 	assign OutPixelY	= Phase3CountY;
 	assign OutR		= (r20r[31])?8'h00:(r20r[26])?8'hFF:r20r[25:18];
